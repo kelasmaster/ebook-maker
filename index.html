@@ -238,7 +238,7 @@
       const paraWords = para.trim().split(/\s+/);
       const wordCount = paraWords.length;
 
-      if (currentPage.wordCount + wordCount > 300) {
+      if (currentPage.wordCount + wordCount > 500) {
         pages.push(currentPage);
         currentPage = { pageNumber: currentPage.pageNumber + 1, content: [para], wordCount: wordCount };
       } else {
