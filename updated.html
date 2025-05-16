@@ -22,24 +22,54 @@
       padding: 20px;
     }
 
+    h2 {
+      text-align: center;
+    }
+
     textarea {
       width: 100%;
       height: 200px;
       padding: 10px;
       font-size: 16px;
-      margin-bottom: 10px;
-    }
-
-    .controls, .advanced-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
       margin-bottom: 20px;
     }
 
-    input[type="text"], select, input[type="number"], input[type="file"] {
+    .section {
+      background: #fff;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .section h3 {
+      margin-top: 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="color"],
+    select,
+    input[type="file"] {
       padding: 6px;
       font-size: 14px;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.2);
     }
 
     .preview {
@@ -78,6 +108,12 @@
       justify-content: space-between;
     }
 
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
     button {
       padding: 10px 15px;
       cursor: pointer;
@@ -85,20 +121,6 @@
       color: white;
       border: none;
       border-radius: 4px;
-    }
-
-    .find-replace {
-      margin-top: 20px;
-      padding: 15px;
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-    }
-
-    @media (max-width: 600px) {
-      .controls, .advanced-controls, .find-replace input {
-        flex-direction: column;
-      }
     }
   </style>
 </head>
@@ -110,50 +132,105 @@
   <!-- Input Area -->
   <textarea id="inputText" placeholder="Paste your text here..."></textarea>
 
-  <!-- File Upload -->
-  <div class="controls">
-    <label>Upload .txt file: <input type="file" id="txtFile" accept=".txt" onchange="loadTextFile(event)"></label>
+  <!-- Section 1: Find & Replace -->
+  <div class="section">
+    <h3>1. Find & Replace</h3>
+    <div class="form-group">
+      <label>Find:
+        <input type="text" id="findWord">
+      </label>
+      <label>Replace:
+        <input type="text" id="replaceWord">
+      </label>
+      <button onclick="replaceWord()">Replace</button>
+      <button onclick="replaceAll()">Replace All</button>
+      <button onclick="cleanText()">Clean Symbols</button>
+      <button onclick="resetText()">Reset</button>
+    </div>
   </div>
 
-  <!-- Find & Replace Panel -->
-  <div class="find-replace">
-    <strong>Find & Replace:</strong><br/>
-    <input type="text" id="findWord" placeholder="Find word/symbol">
-    <input type="text" id="replaceWord" placeholder="Replace with">
-    <button onclick="replaceWord()">Replace</button>
-    <button onclick="replaceAll()">Replace All</button>
-    <button onclick="cleanText()">Clean Symbols</button>
-    <button onclick="resetText()">Reset</button>
+  <!-- Section 2: Book Title & Author -->
+  <div class="section">
+    <h3>2. Book Title & Author</h3>
+    <div class="form-group">
+      <label>Title:
+        <input type="text" id="bookTitle" placeholder="Book Title">
+      </label>
+      <label>Author:
+        <input type="text" id="authorName" placeholder="Author Name">
+      </label>
+    </div>
   </div>
 
-  <!-- Settings -->
-  <div class="controls">
-    <button onclick="cleanAndPaginate()">Generate Ebook</button>
-    <button onclick="exportToPDF()">Export as PDF</button>
-    <button onclick="exportToTxt()">Export as .txt</button>
+  <!-- Section 3: Words per Page -->
+  <div class="section">
+    <h3>3. Words Per Page</h3>
+    <div class="form-group">
+      <label>Words per page:
+        <input type="number" id="wordCount" value="500" style="width: 60px;">
+      </label>
+    </div>
   </div>
 
-  <!-- Advanced Settings -->
-  <div class="advanced-controls">
-    <input type="number" id="wordCount" value="500" style="width: 80px;" title="Words per page"> Words per page
+  <!-- Section 4: Text Color -->
+  <div class="section">
+    <h3>4. Text Color</h3>
+    <div class="form-group">
+      <label>Text Color:
+        <input type="color" id="txtColor" onchange="updateTextStyle()">
+      </label>
+    </div>
+  </div>
 
-    <label>Left Margin: <input type="number" id="marginLeft" value="20" style="width: 60px;"> px</label>
-    <label>Right Margin: <input type="number" id="marginRight" value="20" style="width: 60px;"> px</label>
-
-    <input type="text" id="bookTitle" placeholder="Book Title">
-    <input type="text" id="authorName" placeholder="Author Name">
-
-    <label>Background Color: <input type="color" id="bgColor" onchange="updateBackground()"></label>
-    <label>Background Image: <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)"></label>
-
-    <label>Text Color: <input type="color" id="txtColor" onchange="updateTextStyle()"></label>
-    <label>Font Family:
+  <!-- Section 5: Font Family -->
+  <div class="section">
+    <h3>5. Font Family</h3>
+    <div class="form-group">
       <select id="fontFamily" onchange="updateTextStyle()">
         <option value="Times New Roman">Serif</option>
         <option value="Arial">Sans-serif</option>
         <option value="Courier New">Monospace</option>
       </select>
-    </label>
+    </div>
+  </div>
+
+  <!-- Section 6: Background -->
+  <div class="section">
+    <h3>6. Background Settings</h3>
+    <div class="form-group">
+      <label>Background Color:
+        <input type="color" id="bgColor" onchange="updateBackground()">
+      </label>
+      <label>Background Image:
+        <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)">
+      </label>
+    </div>
+  </div>
+
+  <!-- Section 7: Margins -->
+  <div class="section">
+    <h3>7. Margins</h3>
+    <div class="form-group">
+      <label>Use Same Margin:
+        <input type="checkbox" id="useSameMargin" onchange="toggleMargins()" checked>
+      </label>
+      <label>Left Margin:
+        <input type="number" id="marginLeft" value="30" onchange="updateTextStyle()">
+      </label>
+      <label>Right Margin:
+        <input type="number" id="marginRight" value="30" onchange="updateTextStyle()">
+      </label>
+      <label>Footer Spacing:
+        <input type="number" id="footerSpacing" value="30" onchange="updateTextStyle()">
+      </label>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="controls">
+    <button onclick="cleanAndPaginate()">Generate Ebook</button>
+    <button onclick="exportToPDF()">Export as PDF</button>
+    <button onclick="exportToTxt()">Export as .txt</button>
   </div>
 
   <!-- Preview Area -->
@@ -266,12 +343,11 @@
     pages.forEach(page => {
       const div = document.createElement("div");
       div.className = "page";
-      div.style.background = document.querySelector("#preview").style.background;
 
       const paras = page.content.map(p => `<p>${p.trim()}</p>`).join("");
 
       div.innerHTML = `
-        <div class="content" style="margin-left:${document.getElementById("marginLeft").value}px;margin-right:${document.getElementById("marginRight").value}px;">
+        <div class="content">
           ${paras}
         </div>
         <div class="footer">
@@ -305,6 +381,9 @@
   function updateTextStyle() {
     const txtColor = document.getElementById("txtColor").value;
     const fontFamily = document.getElementById("fontFamily").value;
+    const marginLeft = document.getElementById("marginLeft").value + "px";
+    const marginRight = document.getElementById("marginRight").value + "px";
+    const spacing = document.getElementById("footerSpacing").value + "px";
 
     const allPages = document.querySelectorAll(".page");
 
@@ -315,9 +394,13 @@
       if (content) {
         content.style.color = txtColor;
         content.style.fontFamily = fontFamily;
+        content.style.marginLeft = marginLeft;
+        content.style.marginRight = marginRight;
+        content.style.paddingBottom = spacing;
       }
 
       if (footer) {
+        footer.style.fontSize = "12px";
         footer.style.color = txtColor;
         footer.style.fontFamily = fontFamily;
       }
@@ -363,6 +446,53 @@
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
     link.click();
+  }
+
+  function toggleMargins() {
+    const useSame = document.getElementById("useSameMargin").checked;
+    const left = document.getElementById("marginLeft");
+    const right = document.getElementById("marginRight");
+
+    if (useSame) {
+      left.value = 30;
+      right.value = 30;
+      left.disabled = true;
+      right.disabled = true;
+    } else {
+      left.disabled = false;
+      right.disabled = false;
+    }
+
+    updateTextStyle();
+  }
+
+  function updateTextStyle() {
+    const useSame = document.getElementById("useSameMargin").checked;
+    const marginLeft = useSame ? "30px" : document.getElementById("marginLeft").value + "px";
+    const marginRight = useSame ? "30px" : document.getElementById("marginRight").value + "px";
+    const spacing = document.getElementById("footerSpacing").value + "px";
+    const txtColor = document.getElementById("txtColor").value;
+    const fontFamily = document.getElementById("fontFamily").value;
+
+    const allPages = document.querySelectorAll(".page");
+
+    allPages.forEach(page => {
+      const content = page.querySelector(".content");
+      const footer = page.querySelector(".footer");
+
+      if (content) {
+        content.style.color = txtColor;
+        content.style.fontFamily = fontFamily;
+        content.style.marginLeft = marginLeft;
+        content.style.marginRight = marginRight;
+        content.style.paddingBottom = spacing;
+      }
+
+      if (footer) {
+        footer.style.fontFamily = fontFamily;
+        footer.style.color = txtColor;
+      }
+    });
   }
 </script>
 
