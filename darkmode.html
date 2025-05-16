@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ebook Maker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+
+  <!-- JSZip & Epub Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+  <script src="https://unpkg.com/fb  epub@latest/dist/fb epub.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f4f4;
+      color: #333;
+      transition: all 0.3s ease-in-out;
+    }
+
+    .dark-mode {
+      background: #1e1e1e;
+      color: #f0f0f0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      transition: background 0.3s ease;
+    }
+
+    .dark-mode .section {
+      background: #2c2c2c;
+    }
+
+    .section h3 {
+      margin-top: 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .dark-mode .section h3 {
+      color: #eee;
+    }
+
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="color"],
+    select,
+    input[type="file"] {
+      padding: 6px;
+      font-size: 14px;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+
+    .preview {
+      border: 1px solid #ccc;
+      background: white;
+      min-height: 400px;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .dark-mode .preview {
+      background: #2c2c2c;
+      color: #f0f0f0;
+    }
+
+    .page {
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .content {
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      font-size: 12px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 15px;
+      cursor: pointer;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .dark-toggle {
+      margin-left: auto;
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2><strong>Ebook Maker</strong></h2>
+
+  <!-- Input Area -->
+  <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+
+  <!-- Section 1: Find & Replace -->
+  <div class="section">
+    <h3>1. Find & Replace</h3>
+    <div class="form-group">
+      <label>Find:
+        <input type="text" id="findWord">
+      </label>
+      <label>Replace:
+        <input type="text" id="replaceWord">
+      </label>
+      <button onclick="replaceWord()">Replace</button>
+      <button onclick="replaceAll()">Replace All</button>
+      <button onclick="cleanText()">Clean Symbols</button>
+      <button onclick="resetText()">Reset</button>
+    </div>
+  </div>
+
+  <!-- Section 2: Book Title & Author -->
+  <div class="section">
+    <h3>2. Book Title & Author</h3>
+    <div class="form-group">
+      <label>Title:
+        <input type="text" id="bookTitle" placeholder="Book Title">
+      </label>
+      <label>Author:
+        <input type="text" id="authorName" placeholder="Author Name">
+      </label>
+      <button onclick="autoDetectTitle()">Auto-Detect Title</button>
+    </div>
+  </div>
+
+  <!-- Section 3: Words per Page -->
+  <div class="section">
+    <h3>3. Words Per Page</h3>
+    <div class="form-group">
+      <label>Words per page:
+        <input type="number" id="wordCount" value="500" style="width: 60px;">
+      </label>
+    </div>
+  </div>
+
+  <!-- Section 4: Text Color -->
+  <div class="section">
+    <h3>4. Text Color</h3>
+    <div class="form-group">
+      <label>Text Color:
+        <input type="color" id="txtColor" onchange="updateTextStyle()">
+      </label>
+    </div>
+  </div>
+
+  <!-- Section 5: Font Family -->
+  <div class="section">
+    <h3>5. Font Family</h3>
+    <div class="form-group">
+      <select id="fontFamily" onchange="updateTextStyle()">
+        <option value="Times New Roman">Serif</option>
+        <option value="Arial">Sans-serif</option>
+        <option value="Courier New">Monospace</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Section 6: Background -->
+  <div class="section">
+    <h3>6. Background Settings</h3>
+    <div class="form-group">
+      <label>Background Color:
+        <input type="color" id="bgColor" onchange="updateBackground()">
+      </label>
+      <label>Background Image:
+        <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)">
+      </label>
+    </div>
+  </div>
+
+  <!-- Section 7: Margins -->
+  <div class="section">
+    <h3>7. Margins</h3>
+    <div class="form-group">
+      <label>Use Same Margin:
+        <input type="checkbox" id="useSameMargin" onchange="toggleMargins()" checked>
+      </label>
+      <label>Left Margin:
+        <input type="number" id="marginLeft" value="30" onchange="updateTextStyle()">
+      </label>
+      <label>Right Margin:
+        <input type="number" id="marginRight" value="30" onchange="updateTextStyle()">
+      </label>
+      <label>Footer Spacing:
+        <input type="number" id="footerSpacing" value="30" onchange="updateTextStyle()">
+      </label>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="controls">
+    <button onclick="cleanAndPaginate()">Generate Ebook</button>
+    <button onclick="exportToPDF()">Export as PDF</button>
+    <button onclick="exportToTxt()">Export as .txt</button>
+    <button onclick="exportToEpub()">Export as .epub</button>
+    <button class="dark-toggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+  </div>
+
+  <!-- Preview Area -->
+  <div id="preview" class="preview"></div>
+</div>
+
+<script>
+  let originalText = "";
+  let currentText = "";
+  let pages = [];
+
+  // Load input into original and current state
+  document.getElementById("inputText").addEventListener("input", function () {
+    originalText = this.value;
+    currentText = originalText;
+  });
+
+  function replaceWord() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+
+    if (!find) return alert("Please enter a word/symbol to find.");
+    if (!currentText) return alert("Please enter some text first.");
+
+    currentText = currentText.replace(find, replace);
+  }
+
+  function replaceAll() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+
+    if (!find) return alert("Please enter a word/symbol to find.");
+    if (!currentText) return alert("Please enter some text first.");
+
+    const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    currentText = currentText.replace(regex, replace);
+  }
+
+  function cleanText() {
+    if (!currentText) return alert("No text available to clean.");
+
+    // Remove emojis/icons
+    currentText = currentText.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '');
+
+    // Remove unnecessary symbols
+    const symbolsToRemove = /[`~#$%^&*+|<>{}\-=_—–]/g;
+    currentText = currentText.replace(symbolsToRemove, '');
+    alert("Unnecessary symbols and icons removed.");
+  }
+
+  function resetText() {
+    if (!originalText) return alert("No original text to reset.");
+    currentText = originalText;
+    alert("Text has been reset to original.");
+  }
+
+  function loadTextFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      originalText = e.target.result;
+      currentText = originalText;
+      document.getElementById("inputText").value = originalText;
+      alert("Text file loaded successfully!");
+    };
+    reader.readAsText(file);
+  }
+
+  function autoDetectTitle() {
+    const lines = currentText.trim().split(/\r?\n/);
+    for (let line of lines) {
+      line = line.trim();
+      if (line.length > 0 && !/^[\W_]+$/.test(line)) {
+        document.getElementById("bookTitle").value = line;
+        alert("Auto-detected title: " + line);
+        break;
+      }
+    }
+  }
+
+  function cleanAndPaginate() {
+    if (!currentText) return alert("Please paste or clean some text first.");
+
+    const cleaned = currentText.trim();
+
+    const title = document.getElementById("bookTitle").value || "Untitled";
+    const author = document.getElementById("authorName").value || "Unknown Author";
+
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
+
+    const rawParagraphs = cleaned.split(/\n\s*\n/);
+
+    const pages = [];
+    let currentPage = { pageNumber: 1, content: [], wordCount: 0 };
+
+    rawParagraphs.forEach(para => {
+      const paraWords = para.trim().split(/\s+/);
+      const wordCount = paraWords.length;
+
+      if (currentPage.wordCount + wordCount > wordsPerPage) {
+        pages.push(currentPage);
+        currentPage = { pageNumber: currentPage.pageNumber + 1, content: [para], wordCount: wordCount };
+      } else {
+        currentPage.content.push(para);
+        currentPage.wordCount += wordCount;
+      }
+    });
+
+    if (currentPage.content.length > 0) {
+      pages.push(currentPage);
+    }
+
+    // Render pages
+    pages.forEach(page => {
+      const div = document.createElement("div");
+      div.className = "page";
+
+      const paras = page.content.map(p => `<p>${p.trim()}</p>`).join("");
+
+      div.innerHTML = `
+        <div class="content">${paras}</div>
+        <div class="footer">
+          <span>${title} - ${author}</span>
+          <span>Halaman ${page.pageNumber}</span>
+        </div>
+      `;
+      preview.appendChild(div);
+    });
+
+    updateTextStyle(); // Apply current styles
+  }
+
+  function updateBackground() {
+    const preview = document.getElementById("preview");
+    const color = document.getElementById("bgColor").value;
+    preview.style.background = color;
+  }
+
+  function setCustomBackground(input) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById("preview").style.backgroundImage = `url('${e.target.result}')`;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function updateTextStyle() {
+    const txtColor = document.getElementById("txtColor").value;
+    const fontFamily = document.getElementById("fontFamily").value;
+    const marginLeft = document.getElementById("marginLeft").value + "px";
+    const marginRight = document.getElementById("marginRight").value + "px";
+    const spacing = document.getElementById("footerSpacing").value + "px";
+
+    const allPages = document.querySelectorAll(".page");
+
+    allPages.forEach(page => {
+      const content = page.querySelector(".content");
+      const footer = page.querySelector(".footer");
+
+      if (content) {
+        content.style.color = txtColor;
+        content.style.fontFamily = fontFamily;
+        content.style.marginLeft = marginLeft;
+        content.style.marginRight = marginRight;
+        content.style.paddingBottom = spacing;
+      }
+
+      if (footer) {
+        footer.style.fontSize = "12px";
+        footer.style.color = txtColor;
+        footer.style.fontFamily = fontFamily;
+      }
+    });
+  }
+
+  async function exportToPDF() {
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "Untitled";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + ".pdf";
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "pt", "a4");
+    const preview = document.getElementById("preview");
+    const pageElements = preview.querySelectorAll(".page");
+
+    for (let i = 0; i < pageElements.length; i++) {
+      const canvas = await html2canvas(pageElements[i], { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+
+      const width = doc.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+
+      if (i !== 0) doc.addPage();
+      doc.addImage(imgData, 'PNG', 0, 0, width, height);
+    }
+
+    doc.save(fileName);
+  }
+
+  function exportToTxt() {
+    const fullText = document.getElementById("preview").innerText.trim();
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + ".txt";
+
+    const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+  }
+
+  function exportToEpub() {
+    const title = document.getElementById("bookTitle").value.trim() || "Ebook";
+    const author = document.getElementById("authorName").value.trim() || "Unknown Author";
+    const content = Array.from(document.querySelectorAll(".content")).map(el => el.innerText.trim()).join("\n\n");
+
+    const epub = new EPUB(title, { author });
+    epub.addSection(title, content);
+    epub.buildAndDownload();
+  }
+
+  function toggleMargins() {
+    const useSame = document.getElementById("useSameMargin").checked;
+    const left = document.getElementById("marginLeft");
+    const right = document.getElementById("marginRight");
+
+    if (useSame) {
+      left.value = 30;
+      right.value = 30;
+      left.disabled = true;
+      right.disabled = true;
+    } else {
+      left.disabled = false;
+      right.disabled = false;
+    }
+
+    updateTextStyle();
+  }
+
+  function toggleDarkMode() {
+    document.body.classList.toggle("dark-mode");
+  }
+
+  toggleMargins(); // Initialize
+</script>
+
+</body>
+</html>
