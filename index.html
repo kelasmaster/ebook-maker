@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Ebook Maker - Final Version</title>
+  <title>Ebook Maker - Paragraph Preservation</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   
   <!-- Libraries -->
@@ -64,6 +64,7 @@
 
     .content {
       margin: 0 auto;
+      white-space: pre-wrap; /* Preserves line breaks */
     }
 
     .footer {
@@ -75,6 +76,10 @@
       color: #333;
       display: flex;
       justify-content: space-between;
+    }
+
+    p {
+      margin: 1em 0;
     }
 
     button {
