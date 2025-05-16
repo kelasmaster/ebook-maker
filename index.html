@@ -64,10 +64,7 @@
 
     .content {
       white-space: pre-wrap;
-    }
-
-    .content p {
-      margin: 1em 0;
+      line-height: 1.6;
     }
 
     .footer {
@@ -98,15 +95,9 @@
       border-radius: 5px;
     }
 
-    .find-replace input {
-      width: 30%;
-      margin-right: 10px;
-    }
-
     @media (max-width: 600px) {
       .controls, .find-replace input {
         flex-direction: column;
-        width: 100%;
       }
     }
   </style>
@@ -149,13 +140,6 @@
         <option value="Courier New">Monospace</option>
       </select>
     </label>
-
-    <label>Left Margin: <input type="number" id="marginLeft" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
-    <label>Right Margin: <input type="number" id="marginRight" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
-    <label>Content to Footer Spacing: <input type="number" id="footerSpacing" value="40" onchange="updateTextStyle()" style="width: 50px;"> px</label>
-
-    <label>Footer Font Size: <input type="number" id="footerFontSize" value="12" onchange="updateTextStyle()" style="width: 50px;"></label>
-    <label>Footer Color: <input type="color" id="footerColor" value="#333333" onchange="updateTextStyle()"></label>
   </div>
 
   <!-- Preview Area -->
@@ -181,7 +165,6 @@
     if (!currentText) return alert("Please enter some text first.");
 
     currentText = currentText.replace(find, replace);
-    alert("First occurrence replaced.");
   }
 
   function replaceAll() {
@@ -193,7 +176,6 @@
 
     const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     currentText = currentText.replace(regex, replace);
-    alert("All occurrences replaced.");
   }
 
   function cleanText() {
@@ -205,7 +187,6 @@
     // Remove unnecessary symbols (customize as needed)
     const symbolsToRemove = /[`~#$%^&*+|<>{}\-=_—–]/g;
     currentText = currentText.replace(symbolsToRemove, '');
-
     alert("Unnecessary symbols and icons removed.");
   }
 
@@ -219,7 +200,6 @@
     if (!currentText) return alert("Please paste or clean some text first.");
 
     const cleaned = currentText.trim();
-    pages = splitIntoPages(cleaned);
 
     const title = document.getElementById("bookTitle").value || "Untitled";
     const author = document.getElementById("authorName").value || "Unknown Author";
@@ -227,12 +207,37 @@
     const preview = document.getElementById("preview");
     preview.innerHTML = "";
 
+    // Split by paragraphs (double newline), preserve each one
+    const rawParagraphs = cleaned.split(/\n\s*\n/);
+
+    // Group paragraphs into pages by word count (300 words/page)
+    const pages = [];
+    let currentPage = { pageNumber: 1, content: [], wordCount: 0 };
+
+    rawParagraphs.forEach(para => {
+      const paraWords = para.trim().split(/\s+/);
+      const wordCount = paraWords.length;
+
+      if (currentPage.wordCount + wordCount > 300) {
+        pages.push(currentPage);
+        currentPage = { pageNumber: currentPage.pageNumber + 1, content: [para], wordCount: wordCount };
+      } else {
+        currentPage.content.push(para);
+        currentPage.wordCount += wordCount;
+      }
+    });
+
+    if (currentPage.content.length > 0) {
+      pages.push(currentPage);
+    }
+
+    // Render pages
     pages.forEach(page => {
       const div = document.createElement("div");
       div.className = "page";
       div.style.background = document.querySelector("#preview").style.background;
 
-      const paras = page.content.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join("");
+      const paras = page.content.map(p => `<p>${p.trim()}</p>`).join("");
 
       div.innerHTML = `
         <div class="content">
@@ -247,41 +252,6 @@
     });
 
     updateTextStyle(); // Apply current styles
-  }
-
-  function splitIntoPages(text, wordsPerPage = 300) {
-    const result = [];
-    let currentPageWords = [];
-    let pageNumber = 1;
-
-    const paragraphs = text.split(/\n{2,}/); // Split by double newlines
-
-    for (let para of paragraphs) {
-      const paraWords = para.trim().split(/\s+/);
-
-      if (paraWords.length === 0) continue;
-
-      // If adding this paragraph exceeds word limit, finalize current page
-      if (currentPageWords.length + paraWords.length > wordsPerPage) {
-        result.push({ pageNumber: pageNumber++, content: currentPageWords.join(" ") });
-        currentPageWords = paraWords;
-      } else {
-        currentPageWords = currentPageWords.concat(paraWords);
-      }
-
-      // Force page break if needed
-      if (currentPageWords.length >= wordsPerPage) {
-        result.push({ pageNumber: pageNumber++, content: currentPageWords.join(" ") });
-        currentPageWords = [];
-      }
-    }
-
-    // Push remaining content
-    if (currentPageWords.length > 0) {
-      result.push({ pageNumber: pageNumber, content: currentPageWords.join(" ") });
-    }
-
-    return result;
   }
 
   function updateBackground() {
@@ -304,12 +274,6 @@
   function updateTextStyle() {
     const txtColor = document.getElementById("txtColor").value;
     const fontFamily = document.getElementById("fontFamily").value;
-    const marginLeft = document.getElementById("marginLeft").value + "px";
-    const marginRight = document.getElementById("marginRight").value + "px";
-    const spacing = document.getElementById("footerSpacing").value + "px";
-
-    const footerFontSize = document.getElementById("footerFontSize").value + "px";
-    const footerColor = document.getElementById("footerColor").value;
 
     const allPages = document.querySelectorAll(".page");
 
@@ -320,14 +284,11 @@
       if (content) {
         content.style.color = txtColor;
         content.style.fontFamily = fontFamily;
-        content.style.marginLeft = marginLeft;
-        content.style.marginRight = marginRight;
-        content.style.paddingBottom = spacing;
       }
 
       if (footer) {
-        footer.style.fontSize = footerFontSize;
-        footer.style.color = footerColor;
+        footer.style.color = txtColor;
+        footer.style.fontFamily = fontFamily;
       }
     });
   }
