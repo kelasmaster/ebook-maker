@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Ebook Maker - Paragraph Preservation</title>
+  <title>Ebook Maker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   
   <!-- Libraries -->
@@ -49,6 +49,7 @@
       padding: 20px;
       overflow-y: auto;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      white-space: pre-wrap;
     }
 
     .page {
@@ -64,7 +65,11 @@
 
     .content {
       margin: 0 auto;
-      white-space: pre-wrap; /* Preserves line breaks */
+      white-space: pre-wrap;
+    }
+
+    p {
+      margin: 1em 0;
     }
 
     .footer {
@@ -78,10 +83,6 @@
       justify-content: space-between;
     }
 
-    p {
-      margin: 1em 0;
-    }
-
     button {
       padding: 10px 15px;
       cursor: pointer;
@@ -91,9 +92,23 @@
       border-radius: 4px;
     }
 
+    .find-replace {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .find-replace input {
+      width: 30%;
+      margin-right: 10px;
+    }
+
     @media (max-width: 600px) {
-      .controls {
+      .controls, .find-replace input {
         flex-direction: column;
+        width: 100%;
       }
     }
   </style>
@@ -103,21 +118,32 @@
 <div class="container">
   <h2><strong>Ebook Maker</strong></h2>
 
-  <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+  <!-- Input Area -->
+  <textarea id="inputText" placeholder="Paste your text here..."></textarea>
 
+  <!-- Find & Replace Panel -->
+  <div class="find-replace">
+    <strong>Find & Replace:</strong><br/>
+    <input type="text" id="findWord" placeholder="Find word/symbol">
+    <input type="text" id="replaceWord" placeholder="Replace with">
+    <button onclick="replaceWord()">Replace</button>
+    <button onclick="replaceAll()">Replace All</button>
+    <button onclick="cleanText()">Clean Symbols</button>
+    <button onclick="resetText()">Reset</button>
+    <button onclick="copyToClipboard()">Copy Result</button>
+  </div>
+
+  <!-- Settings -->
   <div class="controls">
     <button onclick="cleanAndPaginate()">Generate Ebook</button>
     <button onclick="exportToPDF()">Export as PDF</button>
-    <button onclick="resetForm()">Reset</button>
 
     <input type="text" id="bookTitle" placeholder="Book Title">
     <input type="text" id="authorName" placeholder="Author Name">
 
-    <!-- Background -->
     <label>Background Color: <input type="color" id="bgColor" onchange="updateBackground()"></label>
     <label>Background Image: <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)"></label>
 
-    <!-- Text Style -->
     <label>Text Color: <input type="color" id="txtColor" onchange="updateTextStyle()"></label>
     <label>Font Family:
       <select id="fontFamily" onchange="updateTextStyle()">
@@ -127,24 +153,111 @@
       </select>
     </label>
 
-    <!-- Paragraph Margins -->
     <label>Left Margin: <input type="number" id="marginLeft" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
     <label>Right Margin: <input type="number" id="marginRight" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
     <label>Content to Footer Spacing: <input type="number" id="footerSpacing" value="40" onchange="updateTextStyle()" style="width: 50px;"> px</label>
 
-    <!-- Footer Customization -->
     <label>Footer Font Size: <input type="number" id="footerFontSize" value="12" onchange="updateTextStyle()" style="width: 50px;"></label>
     <label>Footer Color: <input type="color" id="footerColor" value="#333333" onchange="updateTextStyle()"></label>
   </div>
 
+  <!-- Preview Area -->
   <div id="preview" class="preview"></div>
 </div>
 
 <script>
+  let originalText = "";
+  let currentText = "";
   let pages = [];
 
-  function cleanText(input) {
-    return input.replace(/[^\w\s.,!?'"()\n]/g, '').trim();
+  // Load input into original and current state
+  document.getElementById("inputText").addEventListener("input", function () {
+    originalText = this.value;
+    currentText = originalText;
+  });
+
+  function replaceWord() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+
+    if (!find) return alert("Please enter a word/symbol to find.");
+    if (!currentText) return alert("Please enter some text first.");
+
+    currentText = currentText.replace(find, replace);
+    alert("First occurrence replaced.");
+  }
+
+  function replaceAll() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+
+    if (!find) return alert("Please enter a word/symbol to find.");
+    if (!currentText) return alert("Please enter some text first.");
+
+    const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    currentText = currentText.replace(regex, replace);
+    alert("All occurrences replaced.");
+  }
+
+  function cleanText() {
+    if (!currentText) return alert("No text available to clean.");
+
+    // Remove emojis/icons
+    currentText = currentText.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '');
+
+    // Remove unnecessary symbols (customize as needed)
+    const symbolsToRemove = /[`~#$%^&*+|<>{}\-=_—–]/g;
+    currentText = currentText.replace(symbolsToRemove, '');
+
+    alert("Unnecessary symbols and icons removed.");
+  }
+
+  function resetText() {
+    if (!originalText) return alert("No original text to reset.");
+    currentText = originalText;
+    alert("Text has been reset to original.");
+  }
+
+  function copyToClipboard() {
+    navigator.clipboard.writeText(currentText).then(() => {
+      alert("Copied to clipboard!");
+    }).catch(err => {
+      alert("Failed to copy.");
+    });
+  }
+
+  function cleanAndPaginate() {
+    if (!currentText) return alert("Please paste or clean some text first.");
+
+    const cleaned = currentText.trim();
+    pages = splitIntoPages(cleaned);
+
+    const title = document.getElementById("bookTitle").value || "Untitled";
+    const author = document.getElementById("authorName").value || "Unknown Author";
+
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    pages.forEach(page => {
+      const div = document.createElement("div");
+      div.className = "page";
+      div.style.background = document.querySelector("#preview").style.background;
+
+      const paras = page.content.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join("");
+
+      div.innerHTML = `
+        <div class="content">
+          ${paras}
+        </div>
+        <div class="footer">
+          <span>${title} - ${author}</span>
+          <span>Halaman ${page.pageNumber}</span>
+        </div>
+      `;
+      preview.appendChild(div);
+    });
+
+    updateTextStyle(); // Apply current styles
   }
 
   function splitIntoPages(text, wordsPerPage = 300) {
@@ -231,40 +344,6 @@
     });
   }
 
-  function cleanAndPaginate() {
-    const rawText = document.getElementById("textInput").value;
-    const cleaned = cleanText(rawText);
-    pages = splitIntoPages(cleaned);
-
-    const title = document.getElementById("bookTitle").value || "Untitled";
-    const author = document.getElementById("authorName").value || "Unknown Author";
-
-    const preview = document.getElementById("preview");
-    preview.innerHTML = "";
-
-    pages.forEach(page => {
-      const div = document.createElement("div");
-      div.className = "page";
-      div.style.background = document.querySelector("#preview").style.background;
-
-      // Preserve paragraphs
-      const paras = page.content.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join("");
-
-      div.innerHTML = `
-        <div class="content">
-          ${paras}
-        </div>
-        <div class="footer">
-          <span>${title} - ${author}</span>
-          <span>Halaman ${page.pageNumber}</span>
-        </div>
-      `;
-      preview.appendChild(div);
-    });
-
-    updateTextStyle(); // Apply current styles
-  }
-
   async function exportToPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("p", "pt", "a4");
@@ -283,24 +362,6 @@
     }
 
     doc.save("ebook.pdf");
-  }
-
-  function resetForm() {
-    document.getElementById("textInput").value = "";
-    document.getElementById("bookTitle").value = "";
-    document.getElementById("authorName").value = "";
-    document.getElementById("bgColor").value = "#ffffff";
-    document.getElementById("bgImage").value = "";
-    document.getElementById("txtColor").value = "#000000";
-    document.getElementById("fontFamily").value = "Times New Roman";
-    document.getElementById("marginLeft").value = "0";
-    document.getElementById("marginRight").value = "0";
-    document.getElementById("footerSpacing").value = "40";
-    document.getElementById("footerFontSize").value = "12";
-    document.getElementById("footerColor").value = "#333333";
-
-    document.getElementById("preview").innerHTML = "";
-    document.getElementById("preview").style.background = "#ffffff";
   }
 </script>
 
