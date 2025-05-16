@@ -128,13 +128,11 @@
 
   <!-- Settings -->
   <div class="controls">
-    <button onclick="cleanAndPaginate()">Generate Ebook</button>
+    <input type="text" id="bookTitle" placeholder="Book Title"><br/>
+    <input type="text" id="authorName" placeholder="Author Name"><br/><br/>
+    <button onclick="cleanAndPaginate()">Generate Ebook</button><br/>
     <button onclick="exportToPDF()">Export as PDF</button>
     <button onclick="exportToTxt()">Export as TXT</button>
-
-    <input type="text" id="bookTitle" placeholder="Book Title">
-    <input type="text" id="authorName" placeholder="Author Name">
-
     <label>Background Color: <input type="color" id="bgColor" onchange="updateBackground()"></label>
     <label>Background Image: <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)"></label>
 
