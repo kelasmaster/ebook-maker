@@ -9,10 +9,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
 
-  <!-- DOCX Export Libraries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.1/docxtemplater.js "></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -134,7 +130,7 @@
   <div class="controls">
     <button onclick="cleanAndPaginate()">Generate Ebook</button>
     <button onclick="exportToPDF()">Export as PDF</button>
-    <button onclick="exportToDocx()">Export as Word (.docx)</button>
+    <button onclick="exportToTxt()">Export as .txt</button>
 
     <input type="text" id="bookTitle" placeholder="Book Title">
     <input type="text" id="authorName" placeholder="Author Name">
@@ -343,20 +339,21 @@
     doc.save(fileName);
   }
 
-  async function exportToDocx() {
+  function exportToTxt() {
     const fullText = document.getElementById("preview").innerText.trim();
-    const bookTitle = document.getElementById("bookTitle").value.trim() || "Untitled";
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
     const fileName = bookTitle
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') + ".docx";
+      .replace(/(^-|-$)/g, '') + ".txt";
 
-    const blob = new Blob([fullText], { type: "application/msword" });
+    const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
     link.click();
   }
 </script>
+
 </body>
 </html>
