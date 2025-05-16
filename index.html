@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <title>Ebook Maker - Enhanced</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ebook Maker</title>
-
-  <!-- jsPDF & html2canvas -->
+  
+  <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
 
@@ -17,11 +17,9 @@
     }
 
     .container {
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
       max-width: 1200px;
       margin: auto;
+      padding: 20px;
     }
 
     textarea {
@@ -39,8 +37,8 @@
       margin-bottom: 20px;
     }
 
-    input[type="text"], input[type="file"] {
-      padding: 8px;
+    input[type="text"], select, input[type="color"] {
+      padding: 6px;
       font-size: 14px;
     }
 
@@ -64,9 +62,13 @@
       background-position: center;
     }
 
+    .content {
+      margin: 0 auto;
+    }
+
     .footer {
       position: absolute;
-      bottom: 10px;
+      bottom: 20px;
       left: 20px;
       right: 20px;
       font-size: 12px;
@@ -94,19 +96,39 @@
 <body>
 
 <div class="container">
-  <h2>Ebook Maker</h2>
+  <h2><strong>Ebook Maker</strong></h2>
 
   <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+
   <div class="controls">
     <button onclick="cleanAndPaginate()">Generate Ebook</button>
-    <button onclick="exportToPDF()">Export as PDF</button>
+    <button onclick="exportToPDF()">Export as Editable PDF</button>
     <button onclick="resetForm()">Reset</button>
 
     <input type="text" id="bookTitle" placeholder="Book Title">
     <input type="text" id="authorName" placeholder="Author Name">
 
+    <!-- Background -->
     <label>Background Color: <input type="color" id="bgColor" onchange="updateBackground()"></label>
     <label>Background Image: <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)"></label>
+
+    <!-- Text Style -->
+    <label>Text Color: <input type="color" id="txtColor" onchange="updateTextStyle()"></label>
+    <label>Font Family:
+      <select id="fontFamily" onchange="updateTextStyle()">
+        <option value="Times New Roman">Serif</option>
+        <option value="Arial">Sans-serif</option>
+        <option value="Courier New">Monospace</option>
+      </select>
+    </label>
+
+    <!-- Paragraph Margins -->
+    <label>Left Margin: <input type="number" id="marginLeft" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
+    <label>Right Margin: <input type="number" id="marginRight" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
+
+    <!-- Footer Customization -->
+    <label>Footer Font Size: <input type="number" id="footerFontSize" value="12" onchange="updateTextStyle()" style="width: 50px;"></label>
+    <label>Footer Color: <input type="color" id="footerColor" value="#333333" onchange="updateTextStyle()"></label>
   </div>
 
   <div id="preview" class="preview"></div>
@@ -154,6 +176,35 @@
     }
   }
 
+  function updateTextStyle() {
+    const txtColor = document.getElementById("txtColor").value;
+    const fontFamily = document.getElementById("fontFamily").value;
+    const marginLeft = document.getElementById("marginLeft").value + "px";
+    const marginRight = document.getElementById("marginRight").value + "px";
+
+    const footerFontSize = document.getElementById("footerFontSize").value + "px";
+    const footerColor = document.getElementById("footerColor").value;
+
+    const allPages = document.querySelectorAll(".page");
+
+    allPages.forEach(page => {
+      const content = page.querySelector(".content");
+      const footer = page.querySelector(".footer");
+
+      if (content) {
+        content.style.color = txtColor;
+        content.style.fontFamily = fontFamily;
+        content.style.marginLeft = marginLeft;
+        content.style.marginRight = marginRight;
+      }
+
+      if (footer) {
+        footer.style.fontSize = footerFontSize;
+        footer.style.color = footerColor;
+      }
+    });
+  }
+
   function cleanAndPaginate() {
     const rawText = document.getElementById("textInput").value;
     const cleaned = cleanText(rawText);
@@ -171,34 +222,35 @@
       div.style.background = document.querySelector("#preview").style.background;
 
       div.innerHTML = `
-        <div>${page.content}</div>
+        <div class="content">
+          <strong>${title}</strong><br/>
+          <small>By ${author}</small><br/><br/>
+          ${page.content.replace(/\n/g, "<br/>")}
+        </div>
         <div class="footer">
           <span>${title} - ${author}</span>
-          <span>Page ${page.pageNumber}</span>
+          <span>Halaman ${page.pageNumber}</span>
         </div>
       `;
       preview.appendChild(div);
     });
+
+    updateTextStyle(); // Apply current styles
   }
 
   async function exportToPDF() {
+    const preview = document.getElementById("preview");
+    const canvas = await html2canvas(preview, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("p", "pt", "a4");
-    const preview = document.getElementById("preview");
-    const pageElements = preview.querySelectorAll(".page");
 
-    for (let i = 0; i < pageElements.length; i++) {
-      const canvas = await html2canvas(pageElements[i], { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
+    const width = doc.internal.pageSize.getWidth();
+    const height = (canvas.height * width) / canvas.width;
 
-      const width = doc.internal.pageSize.getWidth();
-      const height = (canvas.height * width) / canvas.width;
-
-      if (i !== 0) doc.addPage();
-      doc.addImage(imgData, 'PNG', 0, 0, width, height);
-    }
-
-    doc.save("ebook.pdf");
+    doc.addImage(imgData, 'PNG', 0, 0, width, height);
+    doc.save("editable_ebook.pdf");
   }
 
   function resetForm() {
@@ -207,6 +259,13 @@
     document.getElementById("authorName").value = "";
     document.getElementById("bgColor").value = "#ffffff";
     document.getElementById("bgImage").value = "";
+    document.getElementById("txtColor").value = "#000000";
+    document.getElementById("fontFamily").value = "Times New Roman";
+    document.getElementById("marginLeft").value = "0";
+    document.getElementById("marginRight").value = "0";
+    document.getElementById("footerFontSize").value = "12";
+    document.getElementById("footerColor").value = "#333333";
+
     document.getElementById("preview").innerHTML = "";
     document.getElementById("preview").style.background = "#ffffff";
   }
