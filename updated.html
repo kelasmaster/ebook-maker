@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ebook Maker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f4f4;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .controls, .advanced-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"], select, input[type="number"], input[type="file"] {
+      padding: 6px;
+      font-size: 14px;
+    }
+
+    .preview {
+      border: 1px solid #ccc;
+      background: white;
+      min-height: 400px;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .page {
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .content {
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      font-size: 12px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    button {
+      padding: 10px 15px;
+      cursor: pointer;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .find-replace {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    @media (max-width: 600px) {
+      .controls, .advanced-controls, .find-replace input {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2><strong>Ebook Maker</strong></h2>
+
+  <!-- Input Area -->
+  <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+
+  <!-- File Upload -->
+  <div class="controls">
+    <label>Upload .txt file: <input type="file" id="txtFile" accept=".txt" onchange="loadTextFile(event)"></label>
+  </div>
+
+  <!-- Find & Replace Panel -->
+  <div class="find-replace">
+    <strong>Find & Replace:</strong><br/>
+    <input type="text" id="findWord" placeholder="Find word/symbol">
+    <input type="text" id="replaceWord" placeholder="Replace with">
+    <button onclick="replaceWord()">Replace</button>
+    <button onclick="replaceAll()">Replace All</button>
+    <button onclick="cleanText()">Clean Symbols</button>
+    <button onclick="resetText()">Reset</button>
+  </div>
+
+  <!-- Settings -->
+  <div class="controls">
+    <button onclick="cleanAndPaginate()">Generate Ebook</button>
+    <button onclick="exportToPDF()">Export as PDF</button>
+    <button onclick="exportToTxt()">Export as .txt</button>
+  </div>
+
+  <!-- Advanced Settings -->
+  <div class="advanced-controls">
+    <input type="number" id="wordCount" value="500" style="width: 80px;" title="Words per page"> Words per page
+
+    <label>Left Margin: <input type="number" id="marginLeft" value="20" style="width: 60px;"> px</label>
+    <label>Right Margin: <input type="number" id="marginRight" value="20" style="width: 60px;"> px</label>
+
+    <input type="text" id="bookTitle" placeholder="Book Title">
+    <input type="text" id="authorName" placeholder="Author Name">
+
+    <label>Background Color: <input type="color" id="bgColor" onchange="updateBackground()"></label>
+    <label>Background Image: <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)"></label>
+
+    <label>Text Color: <input type="color" id="txtColor" onchange="updateTextStyle()"></label>
+    <label>Font Family:
+      <select id="fontFamily" onchange="updateTextStyle()">
+        <option value="Times New Roman">Serif</option>
+        <option value="Arial">Sans-serif</option>
+        <option value="Courier New">Monospace</option>
+      </select>
+    </label>
+  </div>
+
+  <!-- Preview Area -->
+  <div id="preview" class="preview"></div>
+</div>
+
+<script>
+  let originalText = "";
+  let currentText = "";
+  let pages = [];
+
+  // Load input into original and current state
+  document.getElementById("inputText").addEventListener("input", function () {
+    originalText = this.value;
+    currentText = originalText;
+  });
+
+  function replaceWord() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+
+    if (!find) return alert("Please enter a word/symbol to find.");
+    if (!currentText) return alert("Please enter some text first.");
+
+    currentText = currentText.replace(find, replace);
+  }
+
+  function replaceAll() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+
+    if (!find) return alert("Please enter a word/symbol to find.");
+    if (!currentText) return alert("Please enter some text first.");
+
+    const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    currentText = currentText.replace(regex, replace);
+  }
+
+  function cleanText() {
+    if (!currentText) return alert("No text available to clean.");
+
+    // Remove emojis/icons
+    currentText = currentText.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '');
+
+    // Remove unnecessary symbols
+    const symbolsToRemove = /[`~#$%^&*+|<>{}\-=_—–]/g;
+    currentText = currentText.replace(symbolsToRemove, '');
+    alert("Unnecessary symbols and icons removed.");
+  }
+
+  function resetText() {
+    if (!originalText) return alert("No original text to reset.");
+    currentText = originalText;
+    alert("Text has been reset to original.");
+  }
+
+  function loadTextFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      originalText = e.target.result;
+      currentText = originalText;
+      document.getElementById("inputText").value = originalText;
+      alert("Text file loaded successfully!");
+    };
+    reader.readAsText(file);
+  }
+
+  function cleanAndPaginate() {
+    if (!currentText) return alert("Please paste or clean some text first.");
+
+    const cleaned = currentText.trim();
+
+    const title = document.getElementById("bookTitle").value || "Untitled";
+    const author = document.getElementById("authorName").value || "Unknown Author";
+
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    // Get user-defined word count
+    const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
+
+    // Split by paragraphs (double newline), preserve each one
+    const rawParagraphs = cleaned.split(/\n\s*\n/);
+
+    // Group paragraphs into pages by word count
+    const pages = [];
+    let currentPage = { pageNumber: 1, content: [], wordCount: 0 };
+
+    rawParagraphs.forEach(para => {
+      const paraWords = para.trim().split(/\s+/);
+      const wordCount = paraWords.length;
+
+      if (currentPage.wordCount + wordCount > wordsPerPage) {
+        pages.push(currentPage);
+        currentPage = { pageNumber: currentPage.pageNumber + 1, content: [para], wordCount: wordCount };
+      } else {
+        currentPage.content.push(para);
+        currentPage.wordCount += wordCount;
+      }
+    });
+
+    if (currentPage.content.length > 0) {
+      pages.push(currentPage);
+    }
+
+    // Render pages
+    pages.forEach(page => {
+      const div = document.createElement("div");
+      div.className = "page";
+      div.style.background = document.querySelector("#preview").style.background;
+
+      const paras = page.content.map(p => `<p>${p.trim()}</p>`).join("");
+
+      div.innerHTML = `
+        <div class="content" style="margin-left:${document.getElementById("marginLeft").value}px;margin-right:${document.getElementById("marginRight").value}px;">
+          ${paras}
+        </div>
+        <div class="footer">
+          <span>${title} - ${author}</span>
+          <span>Halaman ${page.pageNumber}</span>
+        </div>
+      `;
+      preview.appendChild(div);
+    });
+
+    updateTextStyle(); // Apply current styles
+  }
+
+  function updateBackground() {
+    const preview = document.getElementById("preview");
+    const color = document.getElementById("bgColor").value;
+    preview.style.background = color;
+  }
+
+  function setCustomBackground(input) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById("preview").style.backgroundImage = `url('${e.target.result}')`;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function updateTextStyle() {
+    const txtColor = document.getElementById("txtColor").value;
+    const fontFamily = document.getElementById("fontFamily").value;
+
+    const allPages = document.querySelectorAll(".page");
+
+    allPages.forEach(page => {
+      const content = page.querySelector(".content");
+      const footer = page.querySelector(".footer");
+
+      if (content) {
+        content.style.color = txtColor;
+        content.style.fontFamily = fontFamily;
+      }
+
+      if (footer) {
+        footer.style.color = txtColor;
+        footer.style.fontFamily = fontFamily;
+      }
+    });
+  }
+
+  async function exportToPDF() {
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "Untitled";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + ".pdf";
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "pt", "a4");
+    const preview = document.getElementById("preview");
+    const pageElements = preview.querySelectorAll(".page");
+
+    for (let i = 0; i < pageElements.length; i++) {
+      const canvas = await html2canvas(pageElements[i], { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+
+      const width = doc.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+
+      if (i !== 0) doc.addPage();
+      doc.addImage(imgData, 'PNG', 0, 0, width, height);
+    }
+
+    doc.save(fileName);
+  }
+
+  function exportToTxt() {
+    const fullText = document.getElementById("preview").innerText.trim();
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + ".txt";
+
+    const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+  }
+</script>
+
+</body>
+</html>
