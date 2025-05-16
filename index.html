@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ebook Maker</title>
+
+  <!-- jsPDF & html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f4f4;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"], input[type="file"] {
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    .preview {
+      border: 1px solid #ccc;
+      background: white;
+      min-height: 400px;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .page {
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 10px;
+      left: 20px;
+      right: 20px;
+      font-size: 12px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    button {
+      padding: 10px 15px;
+      cursor: pointer;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Ebook Maker</h2>
+
+  <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+  <div class="controls">
+    <button onclick="cleanAndPaginate()">Generate Ebook</button>
+    <button onclick="exportToPDF()">Export as PDF</button>
+    <button onclick="resetForm()">Reset</button>
+
+    <input type="text" id="bookTitle" placeholder="Book Title">
+    <input type="text" id="authorName" placeholder="Author Name">
+
+    <label>Background Color: <input type="color" id="bgColor" onchange="updateBackground()"></label>
+    <label>Background Image: <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)"></label>
+  </div>
+
+  <div id="preview" class="preview"></div>
+</div>
+
+<script>
+  let pages = [];
+
+  function cleanText(input) {
+    return input.replace(/[^\w\s.,!?'"()]/g, '').trim();
+  }
+
+  function splitIntoPages(text, wordsPerPage = 300) {
+    const words = text.split(/\s+/);
+    const result = [];
+    let currentPage = "";
+    let pageNum = 1;
+
+    for (let i = 0; i < words.length; i++) {
+      if ((currentPage + " " + words[i]).split(/\s+/).length > wordsPerPage) {
+        result.push({ pageNumber: pageNum++, content: currentPage });
+        currentPage = words[i];
+      } else {
+        currentPage += " " + words[i];
+      }
+    }
+    if (currentPage) result.push({ pageNumber: pageNum, content: currentPage });
+    return result;
+  }
+
+  function updateBackground() {
+    const preview = document.getElementById("preview");
+    const color = document.getElementById("bgColor").value;
+    preview.style.background = color;
+  }
+
+  function setCustomBackground(input) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById("preview").style.backgroundImage = `url('${e.target.result}')`;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function cleanAndPaginate() {
+    const rawText = document.getElementById("textInput").value;
+    const cleaned = cleanText(rawText);
+    pages = splitIntoPages(cleaned);
+
+    const title = document.getElementById("bookTitle").value || "Untitled";
+    const author = document.getElementById("authorName").value || "Unknown Author";
+
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    pages.forEach(page => {
+      const div = document.createElement("div");
+      div.className = "page";
+      div.style.background = document.querySelector("#preview").style.background;
+
+      div.innerHTML = `
+        <div>${page.content}</div>
+        <div class="footer">
+          <span>${title} - ${author}</span>
+          <span>Page ${page.pageNumber}</span>
+        </div>
+      `;
+      preview.appendChild(div);
+    });
+  }
+
+  async function exportToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "pt", "a4");
+    const preview = document.getElementById("preview");
+    const pageElements = preview.querySelectorAll(".page");
+
+    for (let i = 0; i < pageElements.length; i++) {
+      const canvas = await html2canvas(pageElements[i], { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+
+      const width = doc.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+
+      if (i !== 0) doc.addPage();
+      doc.addImage(imgData, 'PNG', 0, 0, width, height);
+    }
+
+    doc.save("ebook.pdf");
+  }
+
+  function resetForm() {
+    document.getElementById("textInput").value = "";
+    document.getElementById("bookTitle").value = "";
+    document.getElementById("authorName").value = "";
+    document.getElementById("bgColor").value = "#ffffff";
+    document.getElementById("bgImage").value = "";
+    document.getElementById("preview").innerHTML = "";
+    document.getElementById("preview").style.background = "#ffffff";
+  }
+</script>
+
+</body>
+</html>
