@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Ebook Maker - Enhanced</title>
+  <meta charset="UTF-8" />
+  <title>Ebook Maker - Final Version</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   
   <!-- Libraries -->
@@ -37,7 +37,7 @@
       margin-bottom: 20px;
     }
 
-    input[type="text"], select, input[type="color"] {
+    input[type="text"], select, input[type="number"] {
       padding: 6px;
       font-size: 14px;
     }
@@ -102,7 +102,7 @@
 
   <div class="controls">
     <button onclick="cleanAndPaginate()">Generate Ebook</button>
-    <button onclick="exportToPDF()">Export as Editable PDF</button>
+    <button onclick="exportToPDF()">Export as PDF</button>
     <button onclick="resetForm()">Reset</button>
 
     <input type="text" id="bookTitle" placeholder="Book Title">
@@ -125,6 +125,7 @@
     <!-- Paragraph Margins -->
     <label>Left Margin: <input type="number" id="marginLeft" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
     <label>Right Margin: <input type="number" id="marginRight" value="0" onchange="updateTextStyle()" style="width: 50px;"> px</label>
+    <label>Content to Footer Spacing: <input type="number" id="footerSpacing" value="40" onchange="updateTextStyle()" style="width: 50px;"> px</label>
 
     <!-- Footer Customization -->
     <label>Footer Font Size: <input type="number" id="footerFontSize" value="12" onchange="updateTextStyle()" style="width: 50px;"></label>
@@ -138,24 +139,42 @@
   let pages = [];
 
   function cleanText(input) {
-    return input.replace(/[^\w\s.,!?'"()]/g, '').trim();
+    return input.replace(/[^\w\s.,!?'"()\n]/g, '').trim();
   }
 
   function splitIntoPages(text, wordsPerPage = 300) {
-    const words = text.split(/\s+/);
+    const paragraphs = text.split(/\n{2,}/); // Split by double newlines
     const result = [];
     let currentPage = "";
     let pageNum = 1;
 
-    for (let i = 0; i < words.length; i++) {
-      if ((currentPage + " " + words[i]).split(/\s+/).length > wordsPerPage) {
+    for (let para of paragraphs) {
+      const words = para.trim().split(/\s+/);
+      if (words.length === 0) continue;
+
+      while (words.length > 0) {
+        const remaining = wordsPerPage - currentPage.split(/\s+/).length;
+        if (remaining <= 0) {
+          result.push({ pageNumber: pageNum++, content: currentPage });
+          currentPage = "";
+        }
+
+        const addWords = words.splice(0, Math.min(remaining, words.length));
+        currentPage += " " + addWords.join(" ");
+      }
+
+      if ((currentPage.split(/\s+/).length + words.length) > wordsPerPage) {
         result.push({ pageNumber: pageNum++, content: currentPage });
-        currentPage = words[i];
+        currentPage = para;
       } else {
-        currentPage += " " + words[i];
+        currentPage += " " + para;
       }
     }
-    if (currentPage) result.push({ pageNumber: pageNum, content: currentPage });
+
+    if (currentPage.trim()) {
+      result.push({ pageNumber: pageNum, content: currentPage.trim() });
+    }
+
     return result;
   }
 
@@ -181,6 +200,7 @@
     const fontFamily = document.getElementById("fontFamily").value;
     const marginLeft = document.getElementById("marginLeft").value + "px";
     const marginRight = document.getElementById("marginRight").value + "px";
+    const spacing = document.getElementById("footerSpacing").value + "px";
 
     const footerFontSize = document.getElementById("footerFontSize").value + "px";
     const footerColor = document.getElementById("footerColor").value;
@@ -196,6 +216,7 @@
         content.style.fontFamily = fontFamily;
         content.style.marginLeft = marginLeft;
         content.style.marginRight = marginRight;
+        content.style.paddingBottom = spacing;
       }
 
       if (footer) {
@@ -221,11 +242,12 @@
       div.className = "page";
       div.style.background = document.querySelector("#preview").style.background;
 
+      // Preserve paragraphs
+      const paras = page.content.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join("");
+
       div.innerHTML = `
         <div class="content">
-          <strong>${title}</strong><br/>
-          <small>By ${author}</small><br/><br/>
-          ${page.content.replace(/\n/g, "<br/>")}
+          ${paras}
         </div>
         <div class="footer">
           <span>${title} - ${author}</span>
@@ -239,18 +261,23 @@
   }
 
   async function exportToPDF() {
-    const preview = document.getElementById("preview");
-    const canvas = await html2canvas(preview, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("p", "pt", "a4");
+    const preview = document.getElementById("preview");
+    const pageElements = preview.querySelectorAll(".page");
 
-    const width = doc.internal.pageSize.getWidth();
-    const height = (canvas.height * width) / canvas.width;
+    for (let i = 0; i < pageElements.length; i++) {
+      const canvas = await html2canvas(pageElements[i], { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
 
-    doc.addImage(imgData, 'PNG', 0, 0, width, height);
-    doc.save("editable_ebook.pdf");
+      const width = doc.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+
+      if (i !== 0) doc.addPage();
+      doc.addImage(imgData, 'PNG', 0, 0, width, height);
+    }
+
+    doc.save("ebook.pdf");
   }
 
   function resetForm() {
@@ -263,6 +290,7 @@
     document.getElementById("fontFamily").value = "Times New Roman";
     document.getElementById("marginLeft").value = "0";
     document.getElementById("marginRight").value = "0";
+    document.getElementById("footerSpacing").value = "40";
     document.getElementById("footerFontSize").value = "12";
     document.getElementById("footerColor").value = "#333333";
 
