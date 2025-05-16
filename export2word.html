@@ -194,7 +194,7 @@
     // Remove emojis/icons
     currentText = currentText.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '');
 
-    // Remove unnecessary symbols (customize as needed)
+    // Remove unnecessary symbols
     const symbolsToRemove = /[`~#$%^&*+|<>{}\-=_—–]/g;
     currentText = currentText.replace(symbolsToRemove, '');
     alert("Unnecessary symbols and icons removed.");
@@ -318,6 +318,12 @@
   }
 
   async function exportToPDF() {
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "Untitled";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + ".pdf";
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("p", "pt", "a4");
     const preview = document.getElementById("preview");
@@ -334,19 +340,23 @@
       doc.addImage(imgData, 'PNG', 0, 0, width, height);
     }
 
-    doc.save("ebook.pdf");
+    doc.save(fileName);
   }
 
   async function exportToDocx() {
     const fullText = document.getElementById("preview").innerText.trim();
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "Untitled";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + ".docx";
+
     const blob = new Blob([fullText], { type: "application/msword" });
-    const fileName = (document.getElementById("bookTitle").value || "ebook") + ".docx";
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
     link.click();
   }
 </script>
-
 </body>
 </html>
