@@ -49,7 +49,6 @@
       padding: 20px;
       overflow-y: auto;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      white-space: pre-wrap;
     }
 
     .page {
@@ -64,11 +63,10 @@
     }
 
     .content {
-      margin: 0 auto;
       white-space: pre-wrap;
     }
 
-    p {
+    .content p {
       margin: 1em 0;
     }
 
@@ -130,7 +128,6 @@
     <button onclick="replaceAll()">Replace All</button>
     <button onclick="cleanText()">Clean Symbols</button>
     <button onclick="resetText()">Reset</button>
-    <button onclick="copyToClipboard()">Copy Result</button>
   </div>
 
   <!-- Settings -->
@@ -218,14 +215,6 @@
     alert("Text has been reset to original.");
   }
 
-  function copyToClipboard() {
-    navigator.clipboard.writeText(currentText).then(() => {
-      alert("Copied to clipboard!");
-    }).catch(err => {
-      alert("Failed to copy.");
-    });
-  }
-
   function cleanAndPaginate() {
     if (!currentText) return alert("Please paste or clean some text first.");
 
@@ -261,36 +250,35 @@
   }
 
   function splitIntoPages(text, wordsPerPage = 300) {
-    const paragraphs = text.split(/\n{2,}/); // Split by double newlines
     const result = [];
-    let currentPage = "";
-    let pageNum = 1;
+    let currentPageWords = [];
+    let pageNumber = 1;
+
+    const paragraphs = text.split(/\n{2,}/); // Split by double newlines
 
     for (let para of paragraphs) {
-      const words = para.trim().split(/\s+/);
-      if (words.length === 0) continue;
+      const paraWords = para.trim().split(/\s+/);
 
-      while (words.length > 0) {
-        const remaining = wordsPerPage - currentPage.split(/\s+/).length;
-        if (remaining <= 0) {
-          result.push({ pageNumber: pageNum++, content: currentPage });
-          currentPage = "";
-        }
+      if (paraWords.length === 0) continue;
 
-        const addWords = words.splice(0, Math.min(remaining, words.length));
-        currentPage += " " + addWords.join(" ");
+      // If adding this paragraph exceeds word limit, finalize current page
+      if (currentPageWords.length + paraWords.length > wordsPerPage) {
+        result.push({ pageNumber: pageNumber++, content: currentPageWords.join(" ") });
+        currentPageWords = paraWords;
+      } else {
+        currentPageWords = currentPageWords.concat(paraWords);
       }
 
-      if ((currentPage.split(/\s+/).length + words.length) > wordsPerPage) {
-        result.push({ pageNumber: pageNum++, content: currentPage });
-        currentPage = para;
-      } else {
-        currentPage += " " + para;
+      // Force page break if needed
+      if (currentPageWords.length >= wordsPerPage) {
+        result.push({ pageNumber: pageNumber++, content: currentPageWords.join(" ") });
+        currentPageWords = [];
       }
     }
 
-    if (currentPage.trim()) {
-      result.push({ pageNumber: pageNum, content: currentPage.trim() });
+    // Push remaining content
+    if (currentPageWords.length > 0) {
+      result.push({ pageNumber: pageNumber, content: currentPageWords.join(" ") });
     }
 
     return result;
