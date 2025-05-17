@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Ebook Maker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
+  
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
@@ -85,7 +85,6 @@
     }
 
     .page {
-      page-break-after: always;
       break-after: page;
       position: relative;
       padding: 20px;
@@ -141,6 +140,15 @@
       align-items: center;
       gap: 5px;
     }
+
+    #dropZone {
+      border: 2px dashed #999;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      background: #fff;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -149,28 +157,28 @@
   <h2><strong>Ebook Maker</strong></h2>
 
   <!-- Drag & Drop Upload Area -->
-  <div id="dropZone" style="
-    border: 2px dashed #999;
-    padding: 20px;
-    text-align: center;
-    margin-bottom: 20px;
-    background: #fff;
-    cursor: pointer;">
-    Drag & drop .txt file here or click to upload
-    <input type="file" id="txtFile" accept=".txt" onchange="loadTextFile(event)" style="display:none">
-  </div>
+  <div id="dropZone">Drag & drop .txt file here or click to upload</div>
+  <input type="file" id="txtFile" accept=".txt" style="display:none" onchange="loadTextFile(event)" />
+
+  <!-- Image Upload Button -->
+  <label>Insert Image:
+    <input type="file" id="imgInput" accept="image/*" onchange="insertImage()">
+  </label>
 
   <!-- Input Area -->
   <textarea id="inputText" placeholder="Paste your text here..."></textarea>
 
   <!-- Toggle Settings -->
   <div class="switch-group">
-    <label><input type="checkbox" id="exportAllFormats"> Export all formats in ZIP</label>
-    <label><input type="checkbox" id="exportPerPage"> Export each page separately</label>
-    <label><input type="checkbox" id="useWatermark"> Add watermark to PNG</label>
+    <label><input type="checkbox" id="exportPDF"> PDF</label>
+    <label><input type="checkbox" id="exportPNG"> PNG</label>
+    <label><input type="checkbox" id="useWatermark"> Add Watermark</label>
+    <label>Watermark Text:
+      <input type="text" id="watermarkText" value="© MyEbookApp">
+    </label>
   </div>
 
-  <!-- Section 2: Book Title & Author -->
+  <!-- Section: Book Title & Author -->
   <div class="section">
     <h3>Book Title & Author</h3>
     <div class="form-group">
@@ -184,7 +192,7 @@
     </div>
   </div>
 
-  <!-- Section 3: Words per Page -->
+  <!-- Words per Page -->
   <div class="section">
     <h3>Words Per Page</h3>
     <div class="form-group">
@@ -197,7 +205,7 @@
   <!-- Action Buttons -->
   <div class="controls">
     <button onclick="cleanAndPaginate()">Generate Ebook</button>
-    <button onclick="exportAll()">Export All</button>
+    <button onclick="exportSelected()">Export Selected Formats</button>
   </div>
 
   <!-- Preview Area -->
@@ -207,7 +215,6 @@
 <script>
   let originalText = "";
   let currentText = "";
-  let pages = [];
 
   // Drag & Drop Upload
   const dropZone = document.getElementById("dropZone");
@@ -238,11 +245,23 @@
     }
   });
 
-  // Load input into original and current state
+  // Load input into original state
   document.getElementById("inputText").addEventListener("input", function () {
     originalText = this.value;
     currentText = originalText;
   });
+
+  function loadTextFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById("inputText").value = e.target.result;
+      alert("Text file loaded successfully!");
+    };
+    reader.readAsText(file);
+  }
 
   function autoDetectTitle() {
     const lines = currentText.trim().split(/\r?\n/);
@@ -267,7 +286,7 @@
     let currentChapter = { title: "Untitled", content: [] };
 
     for (let line of lines) {
-      const match = line.match(/^#\s*(.*)$/);
+      const match = line.match(/^#\s*(.*)$/i);
       if (match) {
         if (currentChapter.title !== "Untitled") result.push(currentChapter);
         currentChapter = { title: match[1].trim(), content: [] };
@@ -290,7 +309,7 @@
       const wordCount = paraWords.length;
 
       if (currentPage.wordCount + wordCount > wordsPerPage) {
-        result.push({ ...currentPage });
+        result.push(currentPage.content.join('\n\n'));
         currentPage = { pageNumber: currentPage.pageNumber + 1, content: [para], wordCount: wordCount };
       } else {
         currentPage.content.push(para);
@@ -298,15 +317,26 @@
       }
     });
 
-    if (currentPage.content.length > 0) result.push(currentPage);
+    if (currentPage.content.length > 0) result.push(currentPage.content.join('\n\n'));
+    return result;
+  }
 
-    return result.map(p => p.content.join('\n\n'));
+  function insertImage() {
+    const input = document.getElementById("imgInput");
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const imgTag = `\n\n![Uploaded Image](data:image/png;base64,${e.target.result.split(',')[1]})\n\n`;
+      document.getElementById("inputText").value += imgTag;
+    };
+    reader.readAsDataURL(file);
   }
 
   function cleanAndPaginate() {
-    if (!document.getElementById("inputText").value.trim()) return alert("Please paste or upload some text first.");
-
-    const cleaned = cleanText(document.getElementById("inputText").value);
+    const input = document.getElementById("inputText").value;
+    const cleaned = cleanText(input);
     const bookTitle = document.getElementById("bookTitle").value || "Untitled";
     const authorName = document.getElementById("authorName").value || "Unknown Author";
     const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
@@ -322,14 +352,18 @@
         const div = document.createElement("div");
         div.className = "page";
 
-        const paras = page.split(/\n{2,}/).map(p => `<p>${p}</p>`).join("");
+        // Render image if any
+        const rendered = page
+          .replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
+            return `<img src="${src}" alt="${alt}" style="max-width:100%;margin:20px 0;">`;
+          });
 
         div.innerHTML = `
           <h3>${chapter.title}</h3>
-          <div class="content">${paras}</div>
+          <div class="content">${rendered}</div>
           <div class="footer">
             <span>${bookTitle} - ${authorName}</span>
-            <span>Halaman ${(idx * wordsPerPage) + i + 1}</span>
+            <span>Halaman ${(idx * wordsPerPage / 500) + i + 1}</span>
           </div>
         `;
         preview.appendChild(div);
@@ -337,60 +371,11 @@
     });
   }
 
-  async function exportPDF(pages, fileName) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("p", "pt", "a4");
-
-    for (let i = 0; i < pages.length; i++) {
-      const canvas = await html2canvas(pages[i], { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const width = doc.internal.pageSize.getWidth();
-      const height = (canvas.height * width) / canvas.width;
-
-      if (i !== 0) doc.addPage();
-      doc.addImage(imgData, 'PNG', 0, 0, width, height);
-    }
-
-    doc.save(fileName + ".pdf");
-  }
-
-  async function exportPNG(pages, fileName, addWatermark = false) {
-    for (let i = 0; i < pages.length; i++) {
-      const canvas = await html2canvas(pages[i], { scale: 2 });
-      const ctx = canvas.getContext("2d");
-
-      if (addWatermark) {
-        ctx.fillStyle = "rgba(0,0,0,0.1)";
-        ctx.font = "bold 30px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("© MyEbookApp", canvas.width / 2, canvas.height / 2);
-      }
-
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `${fileName}_page_${i + 1}.png`;
-      link.click();
-    }
-
-    alert(`Exported ${pages.length} PNG pages`);
-  }
-
-  function exportTXT(pages, fileName) {
-    const fullText = Array.from(pages)
-      .map(p => p.innerText)
-      .join("\n\n---\n\n");
-
-    const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName + ".txt";
-    link.click();
-  }
-
-  async function exportAll() {
-    const usePerPage = document.getElementById("exportPerPage").checked;
-    const includeAll = document.getElementById("exportAllFormats").checked;
+  async function exportSelected() {
+    const usePDF = document.getElementById("exportPDF").checked;
+    const usePNG = document.getElementById("exportPNG").checked;
     const addWatermark = document.getElementById("useWatermark").checked;
+    const watermarkText = document.getElementById("watermarkText").value || "© MyEbookApp";
     const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
     const fileName = bookTitle
       .toLowerCase()
@@ -399,116 +384,84 @@
 
     const pages = Array.from(document.querySelectorAll(".page"));
 
-    if (includeAll) {
+    if (!usePDF && !usePNG) {
+      return alert("Please choose at least one format to export.");
+    }
+
+    if (usePDF && usePNG) {
       const zip = new JSZip();
       const pdfFolder = zip.folder("pdf");
       const pngFolder = zip.folder("png");
 
-      // Generate PDF Pages
-      const pdfPromises = pages.map(async (page, i) => {
-        const canvas = await html2canvas(page, { scale: 2 });
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+
+        if (usePDF) {
+          const canvas = await html2canvas(page, { scale: 2 });
+          const imgData = canvas.toDataURL('image/png');
+          const doc = new jsPDF("p", "pt", "a4");
+          const width = doc.internal.pageSize.getWidth();
+          const height = (canvas.height * width) / canvas.width;
+          doc.addImage(imgData, 'PNG', 0, 0, width, height);
+          pdfFolder.file(`page_${i + 1}.pdf`, doc.output("blob"), { binary: true });
+        }
+
+        if (usePNG) {
+          const canvas = await html2canvas(page, { scale: 2 });
+          const ctx = canvas.getContext("2d");
+
+          if (addWatermark) {
+            ctx.fillStyle = "rgba(0,0,0,0.1)";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(watermarkText, canvas.width / 2, canvas.height / 2);
+          }
+
+          const dataUrl = canvas.toDataURL("image/png");
+          pngFolder.file(`page_${i + 1}.png`, dataUrl.replace(/^.*?,/, ""), { base64: true });
+        }
+      }
+
+      const content = await zip.generateAsync({type:"blob"});
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = `${fileName}_pages.zip`;
+      link.click();
+
+      alert("Exported selected formats in ZIP file");
+    } else if (usePDF) {
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], { scale: 2 });
         const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF("p", "pt", "a4");
 
-        pdfFolder.file(`page_${i + 1}.pdf`, await generateSinglePDF(page, i + 1));
-      });
+        const width = doc.internal.pageSize.getWidth();
+        const height = (canvas.height * width) / canvas.width;
 
-      // Generate PNG Pages
-      const pngPromises = pages.map(async (page, i) => {
-        const canvas = await html2canvas(page, { scale: 2 });
+        doc.addImage(imgData, 'PNG', 0, 0, width, height);
+        doc.save(`${fileName}_page_${i + 1}.pdf`);
+      }
+    } else if (usePNG) {
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], { scale: 2 });
         const ctx = canvas.getContext("2d");
 
         if (addWatermark) {
           ctx.fillStyle = "rgba(0,0,0,0.1)";
           ctx.font = "bold 30px Arial";
           ctx.textAlign = "center";
-          ctx.fillText("© MyEbookApp", canvas.width / 2, canvas.height / 2);
+          ctx.fillText(watermarkText, canvas.width / 2, canvas.height / 2);
         }
 
-        const dataUrl = canvas.toDataURL("image/png");
-        pngFolder.file(`page_${i + 1}.png`, dataUrl.replace(/^data:image\/png;base64,/, ""), { base64: true });
-      });
-
-      await Promise.all(pdfPromises);
-      await Promise.all(pngPromises);
-
-      // TXT Export
-      const fullText = Array.from(document.querySelectorAll(".content")).map(el => el.innerText).join("\n\n---\n\n");
-      zip.file(`${fileName}.txt`, fullText);
-
-      // Generate ZIP
-      const content = await zip.generateAsync({type:"blob"});
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(content);
-      link.download = fileName + "_all.zip";
-      link.click();
-
-      alert("Exported all formats in ZIP: PDF, PNG, TXT");
-    } else {
-      if (usePerPage) {
-        for (let i = 0; i < pages.length; i++) {
-          const page = pages[i];
-          const canvas = await html2canvas(page, { scale: 2 });
-          const imgData = canvas.toDataURL('image/png');
-
-          const doc = new jsPDF("p", "pt", "a4");
-          doc.addImage(imgData, 'PNG', 0, 0, doc.internal.pageSize.getWidth(), (canvas.height * doc.internal.pageSize.getWidth()) / canvas.width);
-          doc.save(`${fileName}_page_${i + 1}.pdf`);
-        }
-      } else {
-        const preview = document.getElementById("preview");
-        const allPages = preview.querySelectorAll(".page");
-
-        const combinedCanvas = await html2canvas(preview, { scale: 2 });
-        const combinedDoc = new jsPDF("p", "pt", "a4");
-        const width = combinedDoc.internal.pageSize.getWidth();
-        const height = (combinedCanvas.height * width) / combinedCanvas.width;
-
-        combinedDoc.addImage(combinedCanvas.toDataURL('image/png'), 'PNG', 0, 0, width, height);
-        combinedDoc.save(`${fileName}_full.pdf`);
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `${fileName}_page_${i + 1}.png`;
+        link.click();
       }
+
+      alert("Exported individual PNG files");
     }
-  }
-
-  async function generateSinglePDF(page, pageNum) {
-    const canvas = await html2canvas(page, { scale: 2 });
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("p", "pt", "a4");
-
-    const width = doc.internal.pageSize.getWidth();
-    const height = (canvas.height * width) / canvas.width;
-
-    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, width, height);
-    const blob = new Blob([doc.output("blob")], { type: "application/pdf" });
-    return blob;
-  }
-
-  function updateTextStyle() {
-    const txtColor = document.getElementById("txtColor").value;
-    const fontFamily = document.getElementById("fontFamily").value;
-    const marginLeft = document.getElementById("marginLeft").value + "px";
-    const marginRight = document.getElementById("marginRight").value + "px";
-    const spacing = document.getElementById("footerSpacing").value + "px";
-
-    const allPages = document.querySelectorAll(".page");
-
-    allPages.forEach(page => {
-      const content = page.querySelector(".content");
-      const footer = page.querySelector(".footer");
-
-      if (content) {
-        content.style.color = txtColor;
-        content.style.fontFamily = fontFamily;
-        content.style.marginLeft = marginLeft;
-        content.style.marginRight = marginRight;
-        content.style.paddingBottom = spacing;
-      }
-
-      if (footer) {
-        footer.style.fontSize = "12px";
-        footer.style.color = txtColor;
-        footer.style.fontFamily = fontFamily;
-      }
-    });
   }
 </script>
 
