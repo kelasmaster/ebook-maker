@@ -186,17 +186,18 @@
   <!-- Export Format Options -->
   <div class="section">
     <h3>Export Format</h3>
+
     <strong>Choose PDF Export:</strong>
     <div class="form-group">
-      <label><input type="radio" name="pdfExport" value="per-page"> Save per Page</label>
-      <label><input type="radio" name="pdfExport" value="single"> Save as Single File</label>
-      <label><input type="radio" name="pdfExport" value="zip"> Save All in ZIP</label>
+      <label><input type="radio" name="exportType" value="pdf-per-page"> Save per Page</label>
+      <label><input type="radio" name="exportType" value="pdf-single"> Single File</label>
+      <label><input type="radio" name="exportType" value="pdf-zip"> ZIP (All Pages)</label>
     </div>
 
     <strong>Choose PNG Export:</strong>
     <div class="form-group">
-      <label><input type="radio" name="pngExport" value="per-page"> Save per Page</label>
-      <label><input type="radio" name="pngExport" value="zip"> Save All in ZIP</label>
+      <label><input type="radio" name="exportType" value="png-per-page"> Save per Page</label>
+      <label><input type="radio" name="exportType" value="png-zip"> Save All in ZIP</label>
     </div>
 
     <!-- Watermark Option -->
@@ -322,9 +323,7 @@
       }
     }
 
-    if (currentPage.length > 0) {
-      result.push([...currentPage]);
-    }
+    if (currentPage.length > 0) result.push([...currentPage]);
 
     return result;
   }
@@ -341,7 +340,7 @@
     const fontSize = document.getElementById("fontSize").value + "px";
 
     const preview = document.getElementById("preview");
-    preview.innerHTML = "";
+    preview.innerHTML = ""; // Clear before re-generating
 
     // Show cover page
     if (coverImageSrc) {
@@ -389,8 +388,10 @@
   }
 
   async function exportSelected() {
-    const pdfOption = document.querySelector('input[name="pdfExport"]:checked)?.value;
-    const pngOption = document.querySelector('input[name="pngExport"]:checked)?.value;
+    const exportOption = document.querySelector('input[name="exportType"]:checked');
+    if (!exportOption) return alert("Please choose an export option");
+
+    const format = exportOption.value;
     const addWatermark = document.getElementById("useWatermark").checked;
     const watermarkText = document.getElementById("watermarkText").value || "© MyEbookApp";
     const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
@@ -401,12 +402,13 @@
 
     const pages = Array.from(document.querySelectorAll(".page"));
 
-    // Export PDF
-    if (pdfOption) {
-      if (pdfOption === 'per-page') {
+    // Export Logic
+    if (format.startsWith("pdf")) {
+      if (format === 'pdf-per-page') {
         for (let i = 0; i < pages.length; i++) {
           const canvas = await html2canvas(pages[i], { scale: 2 });
           const imgData = canvas.toDataURL('image/png');
+
           const { jsPDF } = window.jspdf;
           const doc = new jsPDF("p", "pt", "a4");
 
@@ -416,9 +418,9 @@
           doc.addImage(imgData, 'PNG', 0, 0, width, height);
           doc.save(`${fileName}_page_${i + 1}.pdf`);
         }
-        alert("Exported individual PDF files");
+        alert("Exported individual PDF pages");
 
-      } else if (pdfOption === 'single') {
+      } else if (format === 'pdf-single') {
         const fullDoc = new jsPDF("p", "pt", "a4");
         for (let i = 0; i < pages.length; i++) {
           const canvas = await html2canvas(pages[i], { scale: 2 });
@@ -430,11 +432,10 @@
           if (i !== 0) fullDoc.addPage();
           fullDoc.addImage(imgData, 'PNG', 0, 0, width, height);
         }
-
         fullDoc.save(`${fileName}_full.pdf`);
-        alert("Exported all content in one PDF file");
+        alert("Exported all pages as single PDF");
 
-      } else if (pdfOption === 'zip') {
+      } else if (format === 'pdf-zip') {
         const zip = new JSZip();
         const folder = zip.folder("pdf");
 
@@ -447,8 +448,8 @@
 
           const width = doc.internal.pageSize.getWidth();
           const height = (canvas.height * width) / canvas.width;
-          doc.addImage(imgData, 'PNG', 0, 0, width, height);
 
+          doc.addImage(imgData, 'PNG', 0, 0, width, height);
           folder.file(`page_${i + 1}.pdf`, doc.output("blob"), { binary: true });
         }
 
@@ -460,76 +461,83 @@
 
         alert("Exported all PDF pages in ZIP");
 
-      } else {
-        alert("Please choose PDF export format");
+      } else if (format.startsWith("png")) {
+        if (format === 'png-per-page' || format === 'png-zip') {
+          if (format === 'png-per-page') {
+            for (let i = 0; i < pages.length; i++) {
+              const canvas = await html2canvas(pages[i], { scale: 2 });
+              const ctx = canvas.getContext("2d");
+
+              if (addWatermark) {
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(Math.PI / 4); // 45 degrees
+                ctx.fillStyle = "rgba(0,0,0,0.1)";
+                ctx.font = "bold 30px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(watermarkText, 0, 0);
+                ctx.restore();
+              }
+
+              const link = document.createElement("a");
+              link.href = canvas.toDataURL("image/png");
+              link.download = `${fileName}_page_${i + 1}.png`;
+              link.click();
+            }
+            alert("Exported individual PNG files");
+
+          } else if (format === 'png-zip') {
+            const zip = new JSZip();
+            const pngFolder = zip.folder("png");
+
+            for (let i = 0; i < pages.length; i++) {
+              const canvas = await html2canvas(pages[i], { scale: 2 });
+              const ctx = canvas.getContext("2d");
+
+              if (addWatermark) {
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(Math.PI / 4); // 45 degrees
+                ctx.fillStyle = "rgba(0,0,0,0.1)";
+                ctx.font = "bold 30px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(watermarkText, 0, 0);
+                ctx.restore();
+              }
+
+              const dataUrl = canvas.toDataURL("image/png");
+              pngFolder.file(`page_${i + 1}.png`, dataUrl.replace(/^.*?,/, ""), { base64: true });
+            }
+
+            const content = await zip.generateAsync({type:"blob"});
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(content);
+            link.download = `${fileName}_png_pages.zip`;
+            link.click();
+
+            alert("Exported all PNG pages in ZIP");
+          }
+        }
       }
-      return;
     }
 
-    // Export PNG
-    if (pngOption) {
-      if (pngOption === 'per-page') {
-        for (let i = 0; i < pages.length; i++) {
-          const canvas = await html2canvas(pages[i], { scale: 2 });
-          const ctx = canvas.getContext("2d");
+    // Apply font settings live
+    document.getElementById("fontFamily").onchange = cleanAndPaginate;
+    document.getElementById("fontSize").onchange = cleanAndPaginate;
+    document.getElementById("includeMeta").onchange = cleanAndPaginate;
+    document.getElementById("bookTitle").oninput = cleanAndPaginate;
+    document.getElementById("authorName").oninput = cleanAndPaginate;
+    document.getElementById("useWatermark").onchange = cleanAndPaginate;
+    document.getElementById("watermarkText").oninput = cleanAndPaginate;
 
-          if (addWatermark) {
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(Math.PI / 4); // 45 degrees
-            ctx.fillStyle = "rgba(0,0,0,0.1)";
-            ctx.font = "bold 30px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText(watermarkText, 0, 0);
-            ctx.restore();
-          }
+    // Auto-hide metadata section
+    document.getElementById("includeMeta").addEventListener("change", function () {
+      const metaSection = document.querySelector("#metaSection");
+      metaSection.style.display = this.checked ? "" : "none";
+    });
 
-          const link = document.createElement("a");
-          link.href = canvas.toDataURL("image/png");
-          link.download = `${fileName}_page_${i + 1}.png`;
-          link.click();
-        }
-
-        alert("Exported individual PNG files");
-
-      } else if (pngOption === 'zip') {
-        const zip = new JSZip();
-        const folder = zip.folder("png");
-
-        for (let i = 0; i < pages.length; i++) {
-          const canvas = await html2canvas(pages[i], { scale: 2 });
-          const ctx = canvas.getContext("2d");
-
-          if (addWatermark) {
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(Math.PI / 4); // 45 degrees
-            ctx.fillStyle = "rgba(0,0,0,0.1)";
-            ctx.font = "bold 30px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText(watermarkText, 0, 0);
-            ctx.restore();
-          }
-
-          const dataUrl = canvas.toDataURL("image/png");
-          folder.file(`page_${i + 1}.png`, dataUrl.replace(/^.*?,/, ""), { base64: true });
-        }
-
-        const content = await zip.generateAsync({type:"blob"});
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(content);
-        link.download = `${fileName}_png_pages.zip`;
-        link.click();
-
-        alert("Exported all PNG pages in ZIP");
-
-      }
-    } else {
-      alert("Please choose PNG export format");
-      return;
-    }
-  }
-</script>
+    document.getElementById("includeMeta").dispatchEvent(new Event("change"));
+  </script>
 
 </body>
 </html>
