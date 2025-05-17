@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Ebook Maker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  
+
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
@@ -93,11 +93,12 @@
     .content {
       white-space: pre-wrap;
       line-height: 1.6;
+      margin: 0 30px 40px;
     }
 
     .footer {
       position: absolute;
-      bottom: 40px; /* Space between content and footer */
+      bottom: 40px;
       left: 30px;
       right: 30px;
       font-size: 12px;
@@ -122,26 +123,18 @@
       border-radius: 4px;
     }
 
-    .switch-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .switch-group label {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    #dropZone {
+    #dropZone, #coverPreview {
       border: 2px dashed #999;
       padding: 20px;
       text-align: center;
       margin-bottom: 20px;
       background: #fff;
       cursor: pointer;
+    }
+
+    #coverPreview img {
+      max-width: 100%;
+      margin: 10px 0;
     }
   </style>
 </head>
@@ -158,19 +151,22 @@
   <label>Upload Ebook Cover:
     <input type="file" id="imgInput" accept="image/*" onchange="uploadCoverImage()">
   </label>
+  <div id="coverPreview"></div>
 
   <!-- Input Area -->
   <textarea id="inputText" placeholder="Paste your text here..."></textarea>
 
   <!-- Toggle Settings -->
-  <div class="section switch-group">
-    <label><input type="checkbox" id="includeMeta"> Include Title & Author</label>
-    <label><input type="checkbox" id="exportPDF"> Export PDF Pages</label>
-    <label><input type="checkbox" id="exportPNG"> Export PNG Pages</label>
-    <label><input type="checkbox" id="useWatermark"> Add Watermark</label>
-    <label>Watermark Text:
-      <input type="text" id="watermarkText" value="© MyEbookApp">
-    </label>
+  <div class="section">
+    <div class="switch-group form-group">
+      <label><input type="checkbox" id="includeMeta"> Include Book Title & Author</label>
+      <label><input type="checkbox" id="exportPDF"> Export as PDF Pages</label>
+      <label><input type="checkbox" id="exportPNG"> Export as PNG Pages</label>
+      <label><input type="checkbox" id="useWatermark"> Add Watermark</label>
+      <label>Watermark Text:
+        <input type="text" id="watermarkText" value="© MyEbookApp">
+      </label>
+    </div>
   </div>
 
   <!-- Metadata Section -->
@@ -247,12 +243,7 @@
     }
   });
 
-  // Load input into original state
-  document.getElementById("inputText").addEventListener("input", function () {
-    originalText = this.value;
-    currentText = originalText;
-  });
-
+  // Load text from file input
   function loadTextFile(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -273,7 +264,8 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       coverImageSrc = e.target.result;
-      alert("Cover image uploaded.");
+      const preview = document.getElementById("coverPreview");
+      preview.innerHTML = `<img src="${coverImageSrc}" alt="Cover" style="max-width:100%">`;
     };
     reader.readAsDataURL(file);
   }
@@ -312,21 +304,24 @@
       const wordCount = paraWords.length;
 
       if (currentPage.wordCount + wordCount > wordsPerPage) {
-        result.push(currentPage.content.join('\n\n'));
-        currentPage = { pageNumber: currentPage.pageNumber + 1, content: [para], wordCount: wordCount };
+        result.push({ pageNumber: currentPage.pageNumber++, content: currentPage.content.join("\n\n") });
+        currentPage = { pageNumber: currentPage.pageNumber, content: [para], wordCount: wordCount };
       } else {
         currentPage.content.push(para);
         currentPage.wordCount += wordCount;
       }
     });
 
-    if (currentPage.content.length > 0) result.push(currentPage.content.join('\n\n'));
+    if (currentPage.content.length > 0) {
+      result.push({ pageNumber: currentPage.pageNumber, content: currentPage.content.join("\n\n") });
+    }
+
     return result;
   }
 
   function cleanAndPaginate() {
     const input = document.getElementById("inputText").value;
-    if (!input.trim()) return alert("Please paste or upload some text first.");
+    if (!input.trim()) return alert("Please paste or upload some text.");
 
     const cleaned = cleanText(input);
     const bookTitle = document.getElementById("bookTitle").value || "Untitled";
@@ -339,40 +334,36 @@
     const preview = document.getElementById("preview");
     preview.innerHTML = "";
 
-    // Add cover page
+    // Show cover page
     if (coverImageSrc) {
-      const cover = document.createElement("div");
-      cover.className = "page";
-      cover.style.fontFamily = fontFamily;
-      cover.style.fontSize = fontSize;
-      cover.style.marginLeft = "30px";
-      cover.style.marginRight = "30px";
+      const coverPage = document.createElement("div");
+      coverPage.className = "page";
+      coverPage.style.fontFamily = fontFamily;
+      coverPage.style.fontSize = fontSize;
+      coverPage.style.textAlign = "center";
 
-      cover.innerHTML = `<img src="${coverImageSrc}" style="max-width:100%;margin:auto;display:block;"><br/><br/>`;
+      coverPage.innerHTML = `<img src="${coverImageSrc}" style="max-width:100%;margin:auto;display:block;"><br/><br/>`;
       if (includeMeta) {
-        cover.innerHTML += `<center><h2>${bookTitle}</h2><p>${authorName}</p></center>`;
+        coverPage.innerHTML += `<h2>${bookTitle}</h2><p>${authorName}</p>`;
       }
 
-      preview.appendChild(cover);
+      preview.appendChild(coverPage);
     }
 
     const chapters = autoDetectChapters(cleaned);
 
     chapters.forEach((chapter, idx) => {
       const chapterPages = splitIntoPages(chapter.content, wordsPerPage);
+
       chapterPages.forEach((page, i) => {
         const div = document.createElement("div");
         div.className = "page";
         div.style.fontFamily = fontFamily;
         div.style.fontSize = fontSize;
-        div.style.marginLeft = "30px";
-        div.style.marginRight = "30px";
 
-        const paras = page.split(/\n{2,}/).map(p => `<p>${p}</p>`).join("");
+        const paras = page.content ? page.content : page;
+        div.innerHTML = `<div class="content">${paras.replace(/\n/g, "<br>")}</div>`;
 
-        div.innerHTML = paras;
-
-        // Add Footer
         if (includeMeta) {
           div.innerHTML += `
             <div class="footer">
@@ -395,7 +386,7 @@
     const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
     const fileName = bookTitle
       .toLowerCase()
-      .replace(/[^a-z0-8]+/g, '-')
+      .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
 
     const pages = Array.from(document.querySelectorAll(".page"));
@@ -421,7 +412,6 @@
 
           const width = doc.internal.pageSize.getWidth();
           const height = (canvas.height * width) / canvas.width;
-
           doc.addImage(imgData, 'PNG', 0, 0, width, height);
           pdfFolder.file(`page_${i + 1}.pdf`, doc.output("blob"), { binary: true });
         }
@@ -449,7 +439,7 @@
       link.download = `${fileName}_pages.zip`;
       link.click();
 
-      alert("Exported selected formats in ZIP");
+      alert("Exported selected formats in ZIP file");
     } else {
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
@@ -457,7 +447,6 @@
         if (usePDF) {
           const canvas = await html2canvas(page, { scale: 2 });
           const imgData = canvas.toDataURL('image/png');
-
           const { jsPDF } = window.jspdf;
           const doc = new jsPDF("p", "pt", "a4");
 
@@ -486,19 +475,14 @@
         }
       }
 
-      alert("Exported individual files");
+      alert(usePDF && usePNG ? "Exported individual files" : "Export completed.");
     }
   }
 
-  // Apply font settings live
-  document.getElementById("fontFamily").onchange = cleanAndPaginate;
-  document.getElementById("fontSize").onchange = cleanAndPaginate;
-  document.getElementById("includeMeta").onchange = cleanAndPaginate;
-
-  // Auto-hide meta section based on toggle
-  document.getElementById("includeMeta").onchange = function () {
+  // Auto-hide metadata section
+  document.getElementById("includeMeta").addEventListener("change", function () {
     document.getElementById("metaSection").style.display = this.checked ? "" : "none";
-  };
+  });
 
   document.getElementById("includeMeta").dispatchEvent(new Event("change"));
 </script>
