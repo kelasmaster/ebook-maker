@@ -64,10 +64,6 @@
       font-size: 14px;
     }
 
-    input[type="checkbox"] {
-      transform: scale(1.2);
-    }
-
     .preview {
       border: 1px solid #ccc;
       background: white;
@@ -187,26 +183,28 @@
     </div>
   </div>
 
-  <!-- Export Options -->
+  <!-- Export Format Options -->
   <div class="section">
-    <h3>Export Settings</h3>
-
-    <!-- PDF Export Options -->
+    <h3>Export Format</h3>
+    <strong>Choose PDF Export:</strong>
     <div class="form-group">
-      <strong>PDF Export:</strong>
-      <label><input type="checkbox" id="pdfPerPage"> Per Page</label>
-      <label><input type="checkbox" id="pdfSingle"> Single File</label>
-      <label><input type="checkbox" id="pdfZip"> ZIP (All Pages)</label>
+      <label><input type="radio" name="pdfExport" value="per-page"> Save per Page</label>
+      <label><input type="radio" name="pdfExport" value="single"> Save as Single File</label>
+      <label><input type="radio" name="pdfExport" value="zip"> Save All in ZIP</label>
     </div>
 
-    <!-- PNG Export Options -->
+    <strong>Choose PNG Export:</strong>
     <div class="form-group">
-      <strong>PNG Export:</strong>
-      <label><input type="checkbox" id="pngPerPage"> Per Page</label>
-      <label><input type="checkbox" id="pngZip"> ZIP (All Pages)</label>
+      <label><input type="radio" name="pngExport" value="per-page"> Save per Page</label>
+      <label><input type="radio" name="pngExport" value="zip"> Save All in ZIP</label>
+    </div>
+
+    <!-- Watermark Option -->
+    <h3>Watermark</h3>
+    <div class="form-group">
       <label><input type="checkbox" id="useWatermark"> Add Watermark</label>
       <label>Watermark Text:
-        <input type="text" id="watermarkText" value="© Bandar Deterjen">
+        <input type="text" id="watermarkText" value="© MyEbookApp">
       </label>
     </div>
   </div>
@@ -214,7 +212,7 @@
   <!-- Action Buttons -->
   <div class="controls">
     <button onclick="cleanAndPaginate()">Generate Ebook</button>
-    <button onclick="exportSelected()">Export Selected Formats</button>
+    <button onclick="exportSelected()">Export Selected Format</button>
   </div>
 
   <!-- Preview Area -->
@@ -315,7 +313,7 @@
     for (let para of paragraphs) {
       const words = para.trim().split(/\s+/).length;
       if (wordCount + words > wordsPerPage) {
-        result.push({ pageNumber: result.length + 1, content: [...currentPage] });
+        result.push([...currentPage]);
         currentPage = [para];
         wordCount = words;
       } else {
@@ -325,7 +323,7 @@
     }
 
     if (currentPage.length > 0) {
-      result.push({ pageNumber: result.length + 1, content: currentPage });
+      result.push([...currentPage]);
     }
 
     return result;
@@ -373,7 +371,7 @@
         div.style.fontFamily = fontFamily;
         div.style.fontSize = fontSize;
 
-        const paras = page.content.map(p => `<p>${p}</p>`).join("");
+        const paras = page.map(p => `<p>${p}</p>`).join("");
         div.innerHTML = paras;
 
         if (includeMeta) {
@@ -391,12 +389,8 @@
   }
 
   async function exportSelected() {
-    const pdfPerPage = document.getElementById("pdfPerPage").checked;
-    const pdfSingle = document.getElementById("pdfSingle").checked;
-    const pdfZip = document.getElementById("pdfZip").checked;
-
-    const pngPerPage = document.getElementById("pngPerPage").checked;
-    const pngZip = document.getElementById("pngZip").checked;
+    const pdfOption = document.querySelector('input[name="pdfExport"]:checked)?.value;
+    const pngOption = document.querySelector('input[name="pngExport"]:checked)?.value;
     const addWatermark = document.getElementById("useWatermark").checked;
     const watermarkText = document.getElementById("watermarkText").value || "© MyEbookApp";
     const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
@@ -407,9 +401,9 @@
 
     const pages = Array.from(document.querySelectorAll(".page"));
 
-    // PDF Export Logic
-    if (pdfPerPage || pdfSingle || pdfZip) {
-      if (pdfPerPage) {
+    // Export PDF
+    if (pdfOption) {
+      if (pdfOption === 'per-page') {
         for (let i = 0; i < pages.length; i++) {
           const canvas = await html2canvas(pages[i], { scale: 2 });
           const imgData = canvas.toDataURL('image/png');
@@ -422,10 +416,9 @@
           doc.addImage(imgData, 'PNG', 0, 0, width, height);
           doc.save(`${fileName}_page_${i + 1}.pdf`);
         }
-        alert("Exported individual PDF pages");
-      }
+        alert("Exported individual PDF files");
 
-      if (pdfSingle) {
+      } else if (pdfOption === 'single') {
         const fullDoc = new jsPDF("p", "pt", "a4");
         for (let i = 0; i < pages.length; i++) {
           const canvas = await html2canvas(pages[i], { scale: 2 });
@@ -439,10 +432,9 @@
         }
 
         fullDoc.save(`${fileName}_full.pdf`);
-        alert("Exported all pages in one PDF");
-      }
+        alert("Exported all content in one PDF file");
 
-      if (pdfZip) {
+      } else if (pdfOption === 'zip') {
         const zip = new JSZip();
         const folder = zip.folder("pdf");
 
@@ -455,33 +447,41 @@
 
           const width = doc.internal.pageSize.getWidth();
           const height = (canvas.height * width) / canvas.width;
-
           doc.addImage(imgData, 'PNG', 0, 0, width, height);
+
           folder.file(`page_${i + 1}.pdf`, doc.output("blob"), { binary: true });
         }
 
         const blob = await zip.generateAsync({type:"blob"});
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `${fileName}_pdf_pages.zip`;
+        link.download = `${fileName}_pages.zip`;
         link.click();
 
         alert("Exported all PDF pages in ZIP");
+
+      } else {
+        alert("Please choose PDF export format");
       }
+      return;
     }
 
-    // PNG Export Logic
-    if (pngPerPage || pngZip) {
-      if (pngPerPage) {
+    // Export PNG
+    if (pngOption) {
+      if (pngOption === 'per-page') {
         for (let i = 0; i < pages.length; i++) {
           const canvas = await html2canvas(pages[i], { scale: 2 });
           const ctx = canvas.getContext("2d");
 
           if (addWatermark) {
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(Math.PI / 4); // 45 degrees
             ctx.fillStyle = "rgba(0,0,0,0.1)";
             ctx.font = "bold 30px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(watermarkText, canvas.width / 2, canvas.height / 2);
+            ctx.fillText(watermarkText, 0, 0);
+            ctx.restore();
           }
 
           const link = document.createElement("a");
@@ -491,9 +491,8 @@
         }
 
         alert("Exported individual PNG files");
-      }
 
-      if (pngZip) {
+      } else if (pngOption === 'zip') {
         const zip = new JSZip();
         const folder = zip.folder("png");
 
@@ -502,10 +501,14 @@
           const ctx = canvas.getContext("2d");
 
           if (addWatermark) {
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(Math.PI / 4); // 45 degrees
             ctx.fillStyle = "rgba(0,0,0,0.1)";
             ctx.font = "bold 30px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(watermarkText, canvas.width / 2, canvas.height / 2);
+            ctx.fillText(watermarkText, 0, 0);
+            ctx.restore();
           }
 
           const dataUrl = canvas.toDataURL("image/png");
@@ -519,21 +522,13 @@
         link.click();
 
         alert("Exported all PNG pages in ZIP");
-      }
-    }
 
-    if (!(pdfPerPage || pdfSingle || pdfZip || pngPerPage || pngZip)) {
-      alert("Please choose at least one export option.");
+      }
+    } else {
+      alert("Please choose PNG export format");
+      return;
     }
   }
-
-  // Auto-hide metadata section
-  document.getElementById("includeMeta").addEventListener("change", function () {
-    const metaSection = document.querySelector("#metaSection");
-    metaSection.style.display = this.checked ? "" : "none";
-  });
-
-  document.getElementById("includeMeta").dispatchEvent(new Event("change"));
 </script>
 
 </body>
