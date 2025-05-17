@@ -44,12 +44,6 @@
       box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
 
-    .section h3 {
-      margin-top: 0;
-      font-size: 16px;
-      color: #333;
-    }
-
     .form-group {
       display: flex;
       flex-wrap: wrap;
@@ -103,9 +97,9 @@
 
     .footer {
       position: absolute;
-      bottom: 10px;
-      left: 20px;
-      right: 20px;
+      bottom: 40px; /* Space between content and footer */
+      left: 30px;
+      right: 30px;
       font-size: 12px;
       color: #333;
       display: flex;
@@ -160,27 +154,28 @@
   <div id="dropZone">Drag & drop .txt file here or click to upload</div>
   <input type="file" id="txtFile" accept=".txt" style="display:none" onchange="loadTextFile(event)" />
 
-  <!-- Image Upload Button -->
-  <label>Insert Image:
-    <input type="file" id="imgInput" accept="image/*" onchange="insertImage()">
+  <!-- Cover Image Upload -->
+  <label>Upload Ebook Cover:
+    <input type="file" id="imgInput" accept="image/*" onchange="uploadCoverImage()">
   </label>
 
   <!-- Input Area -->
   <textarea id="inputText" placeholder="Paste your text here..."></textarea>
 
   <!-- Toggle Settings -->
-  <div class="switch-group">
-    <label><input type="checkbox" id="exportPDF"> PDF</label>
-    <label><input type="checkbox" id="exportPNG"> PNG</label>
+  <div class="section switch-group">
+    <label><input type="checkbox" id="includeMeta"> Include Title & Author</label>
+    <label><input type="checkbox" id="exportPDF"> Export PDF Pages</label>
+    <label><input type="checkbox" id="exportPNG"> Export PNG Pages</label>
     <label><input type="checkbox" id="useWatermark"> Add Watermark</label>
     <label>Watermark Text:
       <input type="text" id="watermarkText" value="© MyEbookApp">
     </label>
   </div>
 
-  <!-- Section: Book Title & Author -->
-  <div class="section">
-    <h3>Book Title & Author</h3>
+  <!-- Metadata Section -->
+  <div class="section" id="metaSection">
+    <h3>Book Info</h3>
     <div class="form-group">
       <label>Title:
         <input type="text" id="bookTitle" placeholder="Book Title">
@@ -188,16 +183,22 @@
       <label>Author:
         <input type="text" id="authorName" placeholder="Author Name">
       </label>
-      <button onclick="autoDetectTitle()">Auto-Detect Title</button>
     </div>
   </div>
 
-  <!-- Words per Page -->
+  <!-- Font Style Section -->
   <div class="section">
-    <h3>Words Per Page</h3>
+    <h3>Font Settings</h3>
     <div class="form-group">
-      <label>Words per page:
-        <input type="number" id="wordCount" value="500" style="width: 60px;">
+      <label>Font Family:
+        <select id="fontFamily">
+          <option value="Times New Roman">Serif</option>
+          <option value="Arial">Sans-serif</option>
+          <option value="Courier New">Monospace</option>
+        </select>
+      </label>
+      <label>Font Size:
+        <input type="number" id="fontSize" value="14" style="width: 60px;"> px
       </label>
     </div>
   </div>
@@ -215,6 +216,7 @@
 <script>
   let originalText = "";
   let currentText = "";
+  let coverImageSrc = "";
 
   // Drag & Drop Upload
   const dropZone = document.getElementById("dropZone");
@@ -263,16 +265,17 @@
     reader.readAsText(file);
   }
 
-  function autoDetectTitle() {
-    const lines = currentText.trim().split(/\r?\n/);
-    for (let line of lines) {
-      line = line.trim();
-      if (line.length > 0 && !/^[\W_]+$/.test(line)) {
-        document.getElementById("bookTitle").value = line;
-        alert("Auto-detected title: " + line);
-        break;
-      }
-    }
+  function uploadCoverImage() {
+    const input = document.getElementById("imgInput");
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      coverImageSrc = e.target.result;
+      alert("Cover image uploaded.");
+    };
+    reader.readAsDataURL(file);
   }
 
   function cleanText(input) {
@@ -321,28 +324,37 @@
     return result;
   }
 
-  function insertImage() {
-    const input = document.getElementById("imgInput");
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const imgTag = `\n\n![Uploaded Image](data:image/png;base64,${e.target.result.split(',')[1]})\n\n`;
-      document.getElementById("inputText").value += imgTag;
-    };
-    reader.readAsDataURL(file);
-  }
-
   function cleanAndPaginate() {
     const input = document.getElementById("inputText").value;
+    if (!input.trim()) return alert("Please paste or upload some text first.");
+
     const cleaned = cleanText(input);
     const bookTitle = document.getElementById("bookTitle").value || "Untitled";
     const authorName = document.getElementById("authorName").value || "Unknown Author";
+    const includeMeta = document.getElementById("includeMeta").checked;
     const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
+    const fontFamily = document.getElementById("fontFamily").value;
+    const fontSize = document.getElementById("fontSize").value + "px";
 
     const preview = document.getElementById("preview");
     preview.innerHTML = "";
+
+    // Add cover page
+    if (coverImageSrc) {
+      const cover = document.createElement("div");
+      cover.className = "page";
+      cover.style.fontFamily = fontFamily;
+      cover.style.fontSize = fontSize;
+      cover.style.marginLeft = "30px";
+      cover.style.marginRight = "30px";
+
+      cover.innerHTML = `<img src="${coverImageSrc}" style="max-width:100%;margin:auto;display:block;"><br/><br/>`;
+      if (includeMeta) {
+        cover.innerHTML += `<center><h2>${bookTitle}</h2><p>${authorName}</p></center>`;
+      }
+
+      preview.appendChild(cover);
+    }
 
     const chapters = autoDetectChapters(cleaned);
 
@@ -351,21 +363,25 @@
       chapterPages.forEach((page, i) => {
         const div = document.createElement("div");
         div.className = "page";
+        div.style.fontFamily = fontFamily;
+        div.style.fontSize = fontSize;
+        div.style.marginLeft = "30px";
+        div.style.marginRight = "30px";
 
-        // Render image if any
-        const rendered = page
-          .replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-            return `<img src="${src}" alt="${alt}" style="max-width:100%;margin:20px 0;">`;
-          });
+        const paras = page.split(/\n{2,}/).map(p => `<p>${p}</p>`).join("");
 
-        div.innerHTML = `
-          <h3>${chapter.title}</h3>
-          <div class="content">${rendered}</div>
-          <div class="footer">
-            <span>${bookTitle} - ${authorName}</span>
-            <span>Halaman ${(idx * wordsPerPage / 500) + i + 1}</span>
-          </div>
-        `;
+        div.innerHTML = paras;
+
+        // Add Footer
+        if (includeMeta) {
+          div.innerHTML += `
+            <div class="footer">
+              <span>${bookTitle} - ${authorName}</span>
+              <span>Halaman ${(idx * wordsPerPage / 500) + i + 1}</span>
+            </div>
+          `;
+        }
+
         preview.appendChild(div);
       });
     });
@@ -379,7 +395,7 @@
     const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
     const fileName = bookTitle
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/[^a-z0-8]+/g, '-')
       .replace(/(^-|-$)/g, '');
 
     const pages = Array.from(document.querySelectorAll(".page"));
@@ -396,16 +412,21 @@
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
 
+        // Export PDF
         if (usePDF) {
           const canvas = await html2canvas(page, { scale: 2 });
           const imgData = canvas.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
           const doc = new jsPDF("p", "pt", "a4");
+
           const width = doc.internal.pageSize.getWidth();
           const height = (canvas.height * width) / canvas.width;
+
           doc.addImage(imgData, 'PNG', 0, 0, width, height);
           pdfFolder.file(`page_${i + 1}.pdf`, doc.output("blob"), { binary: true });
         }
 
+        // Export PNG
         if (usePNG) {
           const canvas = await html2canvas(page, { scale: 2 });
           const ctx = canvas.getContext("2d");
@@ -428,41 +449,58 @@
       link.download = `${fileName}_pages.zip`;
       link.click();
 
-      alert("Exported selected formats in ZIP file");
-    } else if (usePDF) {
+      alert("Exported selected formats in ZIP");
+    } else {
       for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF("p", "pt", "a4");
+        const page = pages[i];
 
-        const width = doc.internal.pageSize.getWidth();
-        const height = (canvas.height * width) / canvas.width;
+        if (usePDF) {
+          const canvas = await html2canvas(page, { scale: 2 });
+          const imgData = canvas.toDataURL('image/png');
 
-        doc.addImage(imgData, 'PNG', 0, 0, width, height);
-        doc.save(`${fileName}_page_${i + 1}.pdf`);
-      }
-    } else if (usePNG) {
-      for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], { scale: 2 });
-        const ctx = canvas.getContext("2d");
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF("p", "pt", "a4");
 
-        if (addWatermark) {
-          ctx.fillStyle = "rgba(0,0,0,0.1)";
-          ctx.font = "bold 30px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText(watermarkText, canvas.width / 2, canvas.height / 2);
+          const width = doc.internal.pageSize.getWidth();
+          const height = (canvas.height * width) / canvas.width;
+
+          doc.addImage(imgData, 'PNG', 0, 0, width, height);
+          doc.save(`${fileName}_page_${i + 1}.pdf`);
         }
 
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        link.download = `${fileName}_page_${i + 1}.png`;
-        link.click();
+        if (usePNG) {
+          const canvas = await html2canvas(page, { scale: 2 });
+          const ctx = canvas.getContext("2d");
+
+          if (addWatermark) {
+            ctx.fillStyle = "rgba(0,0,0,0.1)";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(watermarkText, canvas.width / 2, canvas.height / 2);
+          }
+
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `${fileName}_page_${i + 1}.png`;
+          link.click();
+        }
       }
 
-      alert("Exported individual PNG files");
+      alert("Exported individual files");
     }
   }
+
+  // Apply font settings live
+  document.getElementById("fontFamily").onchange = cleanAndPaginate;
+  document.getElementById("fontSize").onchange = cleanAndPaginate;
+  document.getElementById("includeMeta").onchange = cleanAndPaginate;
+
+  // Auto-hide meta section based on toggle
+  document.getElementById("includeMeta").onchange = function () {
+    document.getElementById("metaSection").style.display = this.checked ? "" : "none";
+  };
+
+  document.getElementById("includeMeta").dispatchEvent(new Event("change"));
 </script>
 
 </body>
