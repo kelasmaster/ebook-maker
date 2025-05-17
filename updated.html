@@ -4,16 +4,18 @@
   <meta charset="UTF-8" />
   <title>Ebook Maker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  
+
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0; padding: 0;
       background: #f4f4f4;
+      color: #333;
     }
 
     .container {
@@ -35,7 +37,7 @@
     }
 
     .section {
-      background: #fff;
+      background: white;
       border-radius: 6px;
       padding: 15px;
       margin-bottom: 20px;
@@ -79,6 +81,7 @@
       padding: 20px;
       overflow-y: auto;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      position: relative;
     }
 
     .page {
@@ -90,6 +93,8 @@
       border-radius: 5px;
       background-size: cover;
       background-position: center;
+      border: 1px solid #ddd;
+      min-height: 300px;
     }
 
     .content {
@@ -99,7 +104,7 @@
 
     .footer {
       position: absolute;
-      bottom: 20px;
+      bottom: 10px;
       left: 20px;
       right: 20px;
       font-size: 12px;
@@ -110,6 +115,7 @@
 
     .controls {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       margin-top: 20px;
     }
@@ -122,6 +128,19 @@
       border: none;
       border-radius: 4px;
     }
+
+    .switch-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .switch-group label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
   </style>
 </head>
 <body>
@@ -129,29 +148,31 @@
 <div class="container">
   <h2><strong>Ebook Maker</strong></h2>
 
+  <!-- Drag & Drop Upload Area -->
+  <div id="dropZone" style="
+    border: 2px dashed #999;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    background: #fff;
+    cursor: pointer;">
+    Drag & drop .txt file here or click to upload
+    <input type="file" id="txtFile" accept=".txt" onchange="loadTextFile(event)" style="display:none">
+  </div>
+
   <!-- Input Area -->
   <textarea id="inputText" placeholder="Paste your text here..."></textarea>
 
-  <!-- Section 1: Find & Replace -->
-  <div class="section">
-    <h3>1. Find & Replace</h3>
-    <div class="form-group">
-      <label>Find:
-        <input type="text" id="findWord">
-      </label>
-      <label>Replace:
-        <input type="text" id="replaceWord">
-      </label>
-      <button onclick="replaceWord()">Replace</button>
-      <button onclick="replaceAll()">Replace All</button>
-      <button onclick="cleanText()">Clean Symbols</button>
-      <button onclick="resetText()">Reset</button>
-    </div>
+  <!-- Toggle Settings -->
+  <div class="switch-group">
+    <label><input type="checkbox" id="exportAllFormats"> Export all formats in ZIP</label>
+    <label><input type="checkbox" id="exportPerPage"> Export each page separately</label>
+    <label><input type="checkbox" id="useWatermark"> Add watermark to PNG</label>
   </div>
 
   <!-- Section 2: Book Title & Author -->
   <div class="section">
-    <h3>2. Book Title & Author</h3>
+    <h3>Book Title & Author</h3>
     <div class="form-group">
       <label>Title:
         <input type="text" id="bookTitle" placeholder="Book Title">
@@ -159,12 +180,13 @@
       <label>Author:
         <input type="text" id="authorName" placeholder="Author Name">
       </label>
+      <button onclick="autoDetectTitle()">Auto-Detect Title</button>
     </div>
   </div>
 
   <!-- Section 3: Words per Page -->
   <div class="section">
-    <h3>3. Words Per Page</h3>
+    <h3>Words Per Page</h3>
     <div class="form-group">
       <label>Words per page:
         <input type="number" id="wordCount" value="500" style="width: 60px;">
@@ -172,65 +194,10 @@
     </div>
   </div>
 
-  <!-- Section 4: Text Color -->
-  <div class="section">
-    <h3>4. Text Color</h3>
-    <div class="form-group">
-      <label>Text Color:
-        <input type="color" id="txtColor" onchange="updateTextStyle()">
-      </label>
-    </div>
-  </div>
-
-  <!-- Section 5: Font Family -->
-  <div class="section">
-    <h3>5. Font Family</h3>
-    <div class="form-group">
-      <select id="fontFamily" onchange="updateTextStyle()">
-        <option value="Times New Roman">Serif</option>
-        <option value="Arial">Sans-serif</option>
-        <option value="Courier New">Monospace</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Section 6: Background -->
-  <div class="section">
-    <h3>6. Background Settings</h3>
-    <div class="form-group">
-      <label>Background Color:
-        <input type="color" id="bgColor" onchange="updateBackground()">
-      </label>
-      <label>Background Image:
-        <input type="file" id="bgImage" accept="image/*" onchange="setCustomBackground(this)">
-      </label>
-    </div>
-  </div>
-
-  <!-- Section 7: Margins -->
-  <div class="section">
-    <h3>7. Margins</h3>
-    <div class="form-group">
-      <label>Use Same Margin:
-        <input type="checkbox" id="useSameMargin" onchange="toggleMargins()" checked>
-      </label>
-      <label>Left Margin:
-        <input type="number" id="marginLeft" value="30" onchange="updateTextStyle()">
-      </label>
-      <label>Right Margin:
-        <input type="number" id="marginRight" value="30" onchange="updateTextStyle()">
-      </label>
-      <label>Footer Spacing:
-        <input type="number" id="footerSpacing" value="30" onchange="updateTextStyle()">
-      </label>
-    </div>
-  </div>
-
   <!-- Action Buttons -->
   <div class="controls">
     <button onclick="cleanAndPaginate()">Generate Ebook</button>
-    <button onclick="exportToPDF()">Export as PDF</button>
-    <button onclick="exportToTxt()">Export as .txt</button>
+    <button onclick="exportAll()">Export All</button>
   </div>
 
   <!-- Preview Area -->
@@ -242,92 +209,88 @@
   let currentText = "";
   let pages = [];
 
+  // Drag & Drop Upload
+  const dropZone = document.getElementById("dropZone");
+  dropZone.addEventListener("click", () => document.getElementById("txtFile").click());
+
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.style.background = "#eef";
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.style.background = "white";
+  });
+
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.style.background = "white";
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "text/plain") {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById("inputText").value = e.target.result;
+        alert("Text file loaded successfully!");
+      };
+      reader.readAsText(file);
+    } else {
+      alert("Please upload a valid .txt file.");
+    }
+  });
+
   // Load input into original and current state
   document.getElementById("inputText").addEventListener("input", function () {
     originalText = this.value;
     currentText = originalText;
   });
 
-  function replaceWord() {
-    const find = document.getElementById("findWord").value;
-    const replace = document.getElementById("replaceWord").value;
-
-    if (!find) return alert("Please enter a word/symbol to find.");
-    if (!currentText) return alert("Please enter some text first.");
-
-    currentText = currentText.replace(find, replace);
+  function autoDetectTitle() {
+    const lines = currentText.trim().split(/\r?\n/);
+    for (let line of lines) {
+      line = line.trim();
+      if (line.length > 0 && !/^[\W_]+$/.test(line)) {
+        document.getElementById("bookTitle").value = line;
+        alert("Auto-detected title: " + line);
+        break;
+      }
+    }
   }
 
-  function replaceAll() {
-    const find = document.getElementById("findWord").value;
-    const replace = document.getElementById("replaceWord").value;
-
-    if (!find) return alert("Please enter a word/symbol to find.");
-    if (!currentText) return alert("Please enter some text first.");
-
-    const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    currentText = currentText.replace(regex, replace);
+  function cleanText(input) {
+    return input.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '')
+               .replace(/[`~^*+|<>{}_—–]/g, '');
   }
 
-  function cleanText() {
-    if (!currentText) return alert("No text available to clean.");
+  function autoDetectChapters(text) {
+    const lines = text.split(/\r?\n/);
+    const result = [];
+    let currentChapter = { title: "Untitled", content: [] };
 
-    // Remove emojis/icons
-    currentText = currentText.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '');
+    for (let line of lines) {
+      const match = line.match(/^#\s*(.*)$/);
+      if (match) {
+        if (currentChapter.title !== "Untitled") result.push(currentChapter);
+        currentChapter = { title: match[1].trim(), content: [] };
+      } else {
+        currentChapter.content.push(line);
+      }
+    }
 
-    // Remove unnecessary symbols
-    const symbolsToRemove = /[`~#$%^&*+|<>{}\-=_—–]/g;
-    currentText = currentText.replace(symbolsToRemove, '');
-    alert("Unnecessary symbols and icons removed.");
+    if (currentChapter.content.length > 0) result.push(currentChapter);
+    return result;
   }
 
-  function resetText() {
-    if (!originalText) return alert("No original text to reset.");
-    currentText = originalText;
-    alert("Text has been reset to original.");
-  }
-
-  function loadTextFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      originalText = e.target.result;
-      currentText = originalText;
-      document.getElementById("inputText").value = originalText;
-      alert("Text file loaded successfully!");
-    };
-    reader.readAsText(file);
-  }
-
-  function cleanAndPaginate() {
-    if (!currentText) return alert("Please paste or clean some text first.");
-
-    const cleaned = currentText.trim();
-
-    const title = document.getElementById("bookTitle").value || "Untitled";
-    const author = document.getElementById("authorName").value || "Unknown Author";
-
-    const preview = document.getElementById("preview");
-    preview.innerHTML = "";
-
-    // Get user-defined word count
-    const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
-
-    // Split by paragraphs (double newline), preserve each one
-    const rawParagraphs = cleaned.split(/\n\s*\n/);
-
-    // Group paragraphs into pages by word count
-    const pages = [];
+  function splitIntoPages(chapterContent, wordsPerPage = 500) {
+    const paragraphs = chapterContent.join('\n').split(/\n{2,}/);
+    const result = [];
     let currentPage = { pageNumber: 1, content: [], wordCount: 0 };
 
-    rawParagraphs.forEach(para => {
+    paragraphs.forEach(para => {
       const paraWords = para.trim().split(/\s+/);
       const wordCount = paraWords.length;
 
       if (currentPage.wordCount + wordCount > wordsPerPage) {
-        pages.push(currentPage);
+        result.push({ ...currentPage });
         currentPage = { pageNumber: currentPage.pageNumber + 1, content: [para], wordCount: wordCount };
       } else {
         currentPage.content.push(para);
@@ -335,47 +298,188 @@
       }
     });
 
-    if (currentPage.content.length > 0) {
-      pages.push(currentPage);
-    }
+    if (currentPage.content.length > 0) result.push(currentPage);
 
-    // Render pages
-    pages.forEach(page => {
-      const div = document.createElement("div");
-      div.className = "page";
-
-      const paras = page.content.map(p => `<p>${p.trim()}</p>`).join("");
-
-      div.innerHTML = `
-        <div class="content">
-          ${paras}
-        </div>
-        <div class="footer">
-          <span>${title} - ${author}</span>
-          <span>Halaman ${page.pageNumber}</span>
-        </div>
-      `;
-      preview.appendChild(div);
-    });
-
-    updateTextStyle(); // Apply current styles
+    return result.map(p => p.content.join('\n\n'));
   }
 
-  function updateBackground() {
+  function cleanAndPaginate() {
+    if (!document.getElementById("inputText").value.trim()) return alert("Please paste or upload some text first.");
+
+    const cleaned = cleanText(document.getElementById("inputText").value);
+    const bookTitle = document.getElementById("bookTitle").value || "Untitled";
+    const authorName = document.getElementById("authorName").value || "Unknown Author";
+    const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
+
     const preview = document.getElementById("preview");
-    const color = document.getElementById("bgColor").value;
-    preview.style.background = color;
+    preview.innerHTML = "";
+
+    const chapters = autoDetectChapters(cleaned);
+
+    chapters.forEach((chapter, idx) => {
+      const chapterPages = splitIntoPages(chapter.content, wordsPerPage);
+      chapterPages.forEach((page, i) => {
+        const div = document.createElement("div");
+        div.className = "page";
+
+        const paras = page.split(/\n{2,}/).map(p => `<p>${p}</p>`).join("");
+
+        div.innerHTML = `
+          <h3>${chapter.title}</h3>
+          <div class="content">${paras}</div>
+          <div class="footer">
+            <span>${bookTitle} - ${authorName}</span>
+            <span>Halaman ${(idx * wordsPerPage) + i + 1}</span>
+          </div>
+        `;
+        preview.appendChild(div);
+      });
+    });
   }
 
-  function setCustomBackground(input) {
-    const file = input.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        document.getElementById("preview").style.backgroundImage = `url('${e.target.result}')`;
-      };
-      reader.readAsDataURL(file);
+  async function exportPDF(pages, fileName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "pt", "a4");
+
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await html2canvas(pages[i], { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const width = doc.internal.pageSize.getWidth();
+      const height = (canvas.height * width) / canvas.width;
+
+      if (i !== 0) doc.addPage();
+      doc.addImage(imgData, 'PNG', 0, 0, width, height);
     }
+
+    doc.save(fileName + ".pdf");
+  }
+
+  async function exportPNG(pages, fileName, addWatermark = false) {
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await html2canvas(pages[i], { scale: 2 });
+      const ctx = canvas.getContext("2d");
+
+      if (addWatermark) {
+        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        ctx.font = "bold 30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("© MyEbookApp", canvas.width / 2, canvas.height / 2);
+      }
+
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `${fileName}_page_${i + 1}.png`;
+      link.click();
+    }
+
+    alert(`Exported ${pages.length} PNG pages`);
+  }
+
+  function exportTXT(pages, fileName) {
+    const fullText = Array.from(pages)
+      .map(p => p.innerText)
+      .join("\n\n---\n\n");
+
+    const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName + ".txt";
+    link.click();
+  }
+
+  async function exportAll() {
+    const usePerPage = document.getElementById("exportPerPage").checked;
+    const includeAll = document.getElementById("exportAllFormats").checked;
+    const addWatermark = document.getElementById("useWatermark").checked;
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    const pages = Array.from(document.querySelectorAll(".page"));
+
+    if (includeAll) {
+      const zip = new JSZip();
+      const pdfFolder = zip.folder("pdf");
+      const pngFolder = zip.folder("png");
+
+      // Generate PDF Pages
+      const pdfPromises = pages.map(async (page, i) => {
+        const canvas = await html2canvas(page, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+
+        pdfFolder.file(`page_${i + 1}.pdf`, await generateSinglePDF(page, i + 1));
+      });
+
+      // Generate PNG Pages
+      const pngPromises = pages.map(async (page, i) => {
+        const canvas = await html2canvas(page, { scale: 2 });
+        const ctx = canvas.getContext("2d");
+
+        if (addWatermark) {
+          ctx.fillStyle = "rgba(0,0,0,0.1)";
+          ctx.font = "bold 30px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("© MyEbookApp", canvas.width / 2, canvas.height / 2);
+        }
+
+        const dataUrl = canvas.toDataURL("image/png");
+        pngFolder.file(`page_${i + 1}.png`, dataUrl.replace(/^data:image\/png;base64,/, ""), { base64: true });
+      });
+
+      await Promise.all(pdfPromises);
+      await Promise.all(pngPromises);
+
+      // TXT Export
+      const fullText = Array.from(document.querySelectorAll(".content")).map(el => el.innerText).join("\n\n---\n\n");
+      zip.file(`${fileName}.txt`, fullText);
+
+      // Generate ZIP
+      const content = await zip.generateAsync({type:"blob"});
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = fileName + "_all.zip";
+      link.click();
+
+      alert("Exported all formats in ZIP: PDF, PNG, TXT");
+    } else {
+      if (usePerPage) {
+        for (let i = 0; i < pages.length; i++) {
+          const page = pages[i];
+          const canvas = await html2canvas(page, { scale: 2 });
+          const imgData = canvas.toDataURL('image/png');
+
+          const doc = new jsPDF("p", "pt", "a4");
+          doc.addImage(imgData, 'PNG', 0, 0, doc.internal.pageSize.getWidth(), (canvas.height * doc.internal.pageSize.getWidth()) / canvas.width);
+          doc.save(`${fileName}_page_${i + 1}.pdf`);
+        }
+      } else {
+        const preview = document.getElementById("preview");
+        const allPages = preview.querySelectorAll(".page");
+
+        const combinedCanvas = await html2canvas(preview, { scale: 2 });
+        const combinedDoc = new jsPDF("p", "pt", "a4");
+        const width = combinedDoc.internal.pageSize.getWidth();
+        const height = (combinedCanvas.height * width) / combinedCanvas.width;
+
+        combinedDoc.addImage(combinedCanvas.toDataURL('image/png'), 'PNG', 0, 0, width, height);
+        combinedDoc.save(`${fileName}_full.pdf`);
+      }
+    }
+  }
+
+  async function generateSinglePDF(page, pageNum) {
+    const canvas = await html2canvas(page, { scale: 2 });
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "pt", "a4");
+
+    const width = doc.internal.pageSize.getWidth();
+    const height = (canvas.height * width) / canvas.width;
+
+    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, width, height);
+    const blob = new Blob([doc.output("blob")], { type: "application/pdf" });
+    return blob;
   }
 
   function updateTextStyle() {
@@ -403,94 +507,6 @@
         footer.style.fontSize = "12px";
         footer.style.color = txtColor;
         footer.style.fontFamily = fontFamily;
-      }
-    });
-  }
-
-  async function exportToPDF() {
-    const bookTitle = document.getElementById("bookTitle").value.trim() || "Untitled";
-    const fileName = bookTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') + ".pdf";
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("p", "pt", "a4");
-    const preview = document.getElementById("preview");
-    const pageElements = preview.querySelectorAll(".page");
-
-    for (let i = 0; i < pageElements.length; i++) {
-      const canvas = await html2canvas(pageElements[i], { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-
-      const width = doc.internal.pageSize.getWidth();
-      const height = (canvas.height * width) / canvas.width;
-
-      if (i !== 0) doc.addPage();
-      doc.addImage(imgData, 'PNG', 0, 0, width, height);
-    }
-
-    doc.save(fileName);
-  }
-
-  function exportToTxt() {
-    const fullText = document.getElementById("preview").innerText.trim();
-    const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
-    const fileName = bookTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') + ".txt";
-
-    const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-  }
-
-  function toggleMargins() {
-    const useSame = document.getElementById("useSameMargin").checked;
-    const left = document.getElementById("marginLeft");
-    const right = document.getElementById("marginRight");
-
-    if (useSame) {
-      left.value = 30;
-      right.value = 30;
-      left.disabled = true;
-      right.disabled = true;
-    } else {
-      left.disabled = false;
-      right.disabled = false;
-    }
-
-    updateTextStyle();
-  }
-
-  function updateTextStyle() {
-    const useSame = document.getElementById("useSameMargin").checked;
-    const marginLeft = useSame ? "30px" : document.getElementById("marginLeft").value + "px";
-    const marginRight = useSame ? "30px" : document.getElementById("marginRight").value + "px";
-    const spacing = document.getElementById("footerSpacing").value + "px";
-    const txtColor = document.getElementById("txtColor").value;
-    const fontFamily = document.getElementById("fontFamily").value;
-
-    const allPages = document.querySelectorAll(".page");
-
-    allPages.forEach(page => {
-      const content = page.querySelector(".content");
-      const footer = page.querySelector(".footer");
-
-      if (content) {
-        content.style.color = txtColor;
-        content.style.fontFamily = fontFamily;
-        content.style.marginLeft = marginLeft;
-        content.style.marginRight = marginRight;
-        content.style.paddingBottom = spacing;
-      }
-
-      if (footer) {
-        footer.style.fontFamily = fontFamily;
-        footer.style.color = txtColor;
       }
     });
   }
