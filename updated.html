@@ -159,7 +159,7 @@
   <!-- Toggle Settings -->
   <div class="section">
     <div class="switch-group form-group">
-      <label><input type="checkbox" id="includeMeta"> Include Book Title & Author</label>
+      <label><input type="checkbox" id="includeMeta" checked> Include Book Title & Author</label>
       <label><input type="checkbox" id="exportPDF"> Export as PDF Pages</label>
       <label><input type="checkbox" id="exportPNG"> Export as PNG Pages</label>
       <label><input type="checkbox" id="useWatermark"> Add Watermark</label>
@@ -191,7 +191,7 @@
           <option value="Times New Roman">Serif</option>
           <option value="Arial">Sans-serif</option>
           <option value="Courier New">Monospace</option>
-        </select>
+    </select>
       </label>
       <label>Font Size:
         <input type="number" id="fontSize" value="14" style="width: 60px;"> px
@@ -295,25 +295,27 @@
   }
 
   function splitIntoPages(chapterContent, wordsPerPage = 500) {
-    const paragraphs = chapterContent.join('\n').split(/\n{2,}/);
+    const paragraphs = chapterContent.join('\n').split(/\n{2,}/).filter(p => p.trim().length > 0);
     const result = [];
-    let currentPage = { pageNumber: 1, content: [], wordCount: 0 };
+    let currentPage = [];
 
-    paragraphs.forEach(para => {
-      const paraWords = para.trim().split(/\s+/);
-      const wordCount = paraWords.length;
+    let wordCount = 0;
+    let pageWords = [];
 
-      if (currentPage.wordCount + wordCount > wordsPerPage) {
-        result.push({ pageNumber: currentPage.pageNumber++, content: currentPage.content.join("\n\n") });
-        currentPage = { pageNumber: currentPage.pageNumber, content: [para], wordCount: wordCount };
+    for (let para of paragraphs) {
+      const words = para.trim().split(/\s+/).length;
+      if (wordCount + words > wordsPerPage) {
+        result.push({ pageNumber: result.length + 1, content: currentPage.join("\n\n") });
+        currentPage = [para];
+        wordCount = words;
       } else {
-        currentPage.content.push(para);
-        currentPage.wordCount += wordCount;
+        currentPage.push(para);
+        wordCount += words;
       }
-    });
+    }
 
-    if (currentPage.content.length > 0) {
-      result.push({ pageNumber: currentPage.pageNumber, content: currentPage.content.join("\n\n") });
+    if (currentPage.length > 0) {
+      result.push({ pageNumber: result.length + 1, content: currentPage.join("\n\n") });
     }
 
     return result;
@@ -321,13 +323,12 @@
 
   function cleanAndPaginate() {
     const input = document.getElementById("inputText").value;
-    if (!input.trim()) return alert("Please paste or upload some text.");
+    if (!input.trim()) return alert("Please paste or upload some text first.");
 
     const cleaned = cleanText(input);
     const bookTitle = document.getElementById("bookTitle").value || "Untitled";
     const authorName = document.getElementById("authorName").value || "Unknown Author";
     const includeMeta = document.getElementById("includeMeta").checked;
-    const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
     const fontFamily = document.getElementById("fontFamily").value;
     const fontSize = document.getElementById("fontSize").value + "px";
 
@@ -341,6 +342,7 @@
       coverPage.style.fontFamily = fontFamily;
       coverPage.style.fontSize = fontSize;
       coverPage.style.textAlign = "center";
+      coverPage.style.padding = "100px 20px";
 
       coverPage.innerHTML = `<img src="${coverImageSrc}" style="max-width:100%;margin:auto;display:block;"><br/><br/>`;
       if (includeMeta) {
@@ -353,7 +355,7 @@
     const chapters = autoDetectChapters(cleaned);
 
     chapters.forEach((chapter, idx) => {
-      const chapterPages = splitIntoPages(chapter.content, wordsPerPage);
+      const chapterPages = splitIntoPages(chapter.content, 500);
 
       chapterPages.forEach((page, i) => {
         const div = document.createElement("div");
@@ -361,14 +363,13 @@
         div.style.fontFamily = fontFamily;
         div.style.fontSize = fontSize;
 
-        const paras = page.content ? page.content : page;
-        div.innerHTML = `<div class="content">${paras.replace(/\n/g, "<br>")}</div>`;
+        div.innerHTML = `<div class="content">${page.content.replace(/\n/g, "<br>")}</div>`;
 
         if (includeMeta) {
           div.innerHTML += `
             <div class="footer">
               <span>${bookTitle} - ${authorName}</span>
-              <span>Halaman ${(idx * wordsPerPage / 500) + i + 1}</span>
+              <span>Halaman ${(idx * 10 + i + 1)}</span>
             </div>
           `;
         }
@@ -412,6 +413,7 @@
 
           const width = doc.internal.pageSize.getWidth();
           const height = (canvas.height * width) / canvas.width;
+
           doc.addImage(imgData, 'PNG', 0, 0, width, height);
           pdfFolder.file(`page_${i + 1}.pdf`, doc.output("blob"), { binary: true });
         }
@@ -439,7 +441,7 @@
       link.download = `${fileName}_pages.zip`;
       link.click();
 
-      alert("Exported selected formats in ZIP file");
+      alert("Exported selected formats in ZIP");
     } else {
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
@@ -447,6 +449,7 @@
         if (usePDF) {
           const canvas = await html2canvas(page, { scale: 2 });
           const imgData = canvas.toDataURL('image/png');
+
           const { jsPDF } = window.jspdf;
           const doc = new jsPDF("p", "pt", "a4");
 
