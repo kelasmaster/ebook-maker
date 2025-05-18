@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ebook Maker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f4f4;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      background: white;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="color"],
+    select,
+    input[type="file"] {
+      padding: 6px;
+      font-size: 14px;
+    }
+
+    input[type="checkbox"], input[type="radio"] {
+      transform: scale(1.2);
+    }
+
+    .preview {
+      border: 1px solid #ccc;
+      background: white;
+      min-height: 800px;
+      width: 512px;
+      margin: auto;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .page {
+      break-after: page;
+      position: relative;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      background-size: cover;
+      background-position: center;
+      border: 1px solid #ddd;
+      min-height: 700px;
+    }
+
+    .content {
+      white-space: pre-wrap;
+      line-height: 1.6;
+      margin: 0 30px 40px;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 40px;
+      left: 30px;
+      right: 30px;
+      font-size: 12px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 15px;
+      cursor: pointer;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    #dropZone, #coverPreview {
+      border: 2px dashed #999;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    #coverPreview img {
+      max-width: 100%;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2><strong>Ebook Maker</strong></h2>
+
+  <!-- Drag & Drop Upload Area -->
+  <div id="dropZone">Drag & drop .txt file here or click to upload</div>
+  <input type="file" id="txtFile" accept=".txt" style="display:none" onchange="loadTextFile(event)" />
+
+  <!-- Cover Image Upload -->
+  <label>Upload Ebook Cover:
+    <input type="file" id="imgInput" accept="image/*" onchange="uploadCoverImage()">
+  </label>
+  <div id="coverPreview"></div>
+
+  <!-- Input Area -->
+  <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+
+  <!-- Section: Book Info -->
+  <div class="section" id="metaSection">
+    <h3>Book Info</h3>
+    <div class="form-group">
+      <label><input type="checkbox" id="includeMeta" checked onchange="cleanAndPaginate()"> Include Title & Author</label>
+      <label>Title:
+        <input type="text" id="bookTitle" placeholder="Book Title" oninput="cleanAndPaginate()">
+      </label>
+      <label>Author:
+        <input type="text" id="authorName" placeholder="Author Name" oninput="cleanAndPaginate()">
+      </label>
+    </div>
+  </div>
+
+  <!-- Section: Symbols Cleaning + Find & Replace -->
+  <div class="section">
+    <h3>Clean Text</h3>
+    <div class="form-group">
+      <button onclick="cleanText()">Clean Symbols</button>
+      <button onclick="resetText()">Reset</button>
+      <button onclick="autoDetectTitle()">Auto-Detect Title</button>
+    </div>
+    <h3>Find & Replace</h3>
+    <div class="form-group">
+      <label>Find:
+        <input type="text" id="findWord">
+      </label>
+      <label>Replace:
+        <input type="text" id="replaceWord">
+      </label>
+      <button onclick="replaceWord()">Replace</button>
+      <button onclick="replaceAll()">Replace All</button>
+    </div>
+  </div>
+
+  <!-- Section: Font Settings -->
+  <div class="section">
+    <h3>Font Settings</h3>
+    <div class="form-group">
+      <label>Font Family:
+        <select id="fontFamily" onchange="cleanAndPaginate()">
+          <option value="Times New Roman">Serif</option>
+          <option value="Arial">Sans-serif</option>
+          <option value="Courier New">Monospace</option>
+        </select>
+      </label>
+      <label>Font Size:
+        <input type="number" id="fontSize" value="14" style="width: 60px;" onchange="cleanAndPaginate()"> px
+      </label>
+    </div>
+  </div>
+
+  <!-- Section: Margins -->
+  <div class="section">
+    <h3>Margins</h3>
+    <div class="form-group">
+      <label>Left Margin:
+        <input type="number" id="marginLeft" value="30" onchange="cleanAndPaginate()"> px
+      </label>
+      <label>Right Margin:
+        <input type="number" id="marginRight" value="30" onchange="cleanAndPaginate()"> px
+      </label>
+      <label>Content to Footer Spacing:
+        <input type="number" id="footerSpacing" value="40" onchange="cleanAndPaginate()"> px
+      </label>
+    </div>
+  </div>
+
+  <!-- Section: Word Count -->
+  <div class="section">
+    <h3>Words Per Page</h3>
+    <div class="form-group">
+      <label>Max Words:
+        <input type="number" id="wordCount" value="500" onchange="cleanAndPaginate()" style="width: 60px;">
+      </label>
+    </div>
+  </div>
+
+  <!-- Section: Export Options -->
+  <div class="section">
+    <h3>Export Format</h3>
+    <strong>Select One Export Option:</strong>
+    <div class="form-group">
+      <label><input type="radio" name="exportType" value="pdf-per-page" checked> PDF - Save per Page</label>
+      <label><input type="radio" name="exportType" value="pdf-single"> PDF - Save as Single File</label>
+      <label><input type="radio" name="exportType" value="pdf-zip"> PDF - Save All in ZIP</label>
+      <label><input type="radio" name="exportType" value="png-per-page"> PNG - Save per Page</label>
+      <label><input type="radio" name="exportType" value="png-zip"> PNG - Save All in ZIP</label>
+    </div>
+    <h3>Watermark</h3>
+    <div class="form-group">
+      <label><input type="checkbox" id="useWatermark" onchange="cleanAndPaginate()"> Add Watermark</label>
+      <label>Watermark Text:
+        <input type="text" id="watermarkText" value="© Bandar Deterjen" oninput="cleanAndPaginate()">
+      </label>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="controls">
+    <button onclick="cleanAndPaginate()">Generate Ebook</button>
+    <button onclick="exportSelected()">Export Selected Format</button>
+  </div>
+
+  <!-- Preview Area -->
+  <div id="preview" class="preview"></div>
+</div>
+
+<script>
+  let originalText = "";
+  let currentText = "";
+  let coverImageSrc = "";
+
+  // Drag & Drop Upload
+  const dropZone = document.getElementById("dropZone");
+  dropZone.addEventListener("click", () => document.getElementById("txtFile").click());
+
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.style.background = "#eef";
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.style.background = "white";
+  });
+
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.style.background = "white";
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "text/plain") {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById("inputText").value = e.target.result;
+        alert("Text file loaded successfully!");
+      };
+      reader.readAsText(file);
+    } else {
+      alert("Please upload a valid .txt file.");
+    }
+  });
+
+  // Load text from file input
+  function loadTextFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById("inputText").value = e.target.result;
+      alert("Text file loaded successfully!");
+    };
+    reader.readAsText(file);
+  }
+
+  function uploadCoverImage() {
+    const input = document.getElementById("imgInput");
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      coverImageSrc = e.target.result;
+      const preview = document.getElementById("coverPreview");
+      preview.innerHTML = `<img src="${coverImageSrc}" alt="Cover" style="max-width:100%">`;
+      cleanAndPaginate();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function replaceWord() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+    if (!find || !currentText) return alert("Please enter a word to find and some text.");
+    currentText = currentText.replace(find, replace);
+    alert("First occurrence replaced.");
+  }
+
+  function replaceAll() {
+    const find = document.getElementById("findWord").value;
+    const replace = document.getElementById("replaceWord").value;
+    if (!find || !currentText) return alert("Please enter a word to find and some text.");
+    const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    currentText = currentText.replace(regex, replace);
+    alert("All occurrences replaced.");
+  }
+
+  function resetText() {
+    currentText = originalText;
+    cleanAndPaginate();
+    alert("Text has been reset.");
+  }
+
+  function autoDetectTitle() {
+    const lines = currentText.trim().split(/\r?\n/);
+    for (let line of lines) {
+      line = line.trim();
+      if (line.length > 0 && !/^[\W_]+$/.test(line)) {
+        document.getElementById("bookTitle").value = line;
+        cleanAndPaginate();
+        alert("Auto-detected title: " + line);
+        break;
+      }
+    }
+  }
+
+  function cleanText(input) {
+    return input.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '')
+               .replace(/[`~^*+|<>{}_—–]/g, '');
+  }
+
+  function autoDetectChapters(text) {
+    const lines = text.split(/\r?\n/);
+    const result = [];
+    let currentChapter = { title: "Untitled", content: [] };
+
+    for (let line of lines) {
+      const match = line.match(/^#\s*(.*)$/i);
+      if (match) {
+        if (currentChapter.title !== "Untitled") result.push(currentChapter);
+        currentChapter = { title: match[1].trim(), content: [] };
+      } else {
+        currentChapter.content.push(line);
+      }
+    }
+
+    if (currentChapter.content.length > 0) result.push(currentChapter);
+    return result;
+  }
+
+  function splitIntoPages(chapterContent, wordsPerPage = 500) {
+    const paragraphs = chapterContent.join('\n').split(/\n{2,}/).filter(p => p.trim().length > 0);
+    const result = [];
+    let currentPage = [];
+
+    let wordCount = 0;
+    for (let para of paragraphs) {
+      const words = para.trim().split(/\s+/).length;
+      if (wordCount + words > wordsPerPage) {
+        result.push([...currentPage]);
+        currentPage = [para];
+        wordCount = words;
+      } else {
+        currentPage.push(para);
+        wordCount += words;
+      }
+    }
+
+    if (currentPage.length > 0) result.push([...currentPage]);
+
+    return result.map((content, i) => ({
+      pageNumber: i + 1,
+      content: content
+    }));
+  }
+
+  function cleanAndPaginate() {
+    const input = document.getElementById("inputText").value;
+    if (!input.trim()) return alert("Please paste or upload some text first.");
+
+    originalText = input;
+    currentText = document.getElementById("inputText").value;
+
+    const cleaned = cleanText(currentText);
+    const bookTitle = document.getElementById("bookTitle").value || "Untitled";
+    const authorName = document.getElementById("authorName").value || "Unknown Author";
+    const includeMeta = document.getElementById("includeMeta").checked;
+    const fontFamily = document.getElementById("fontFamily").value;
+    const fontSize = document.getElementById("fontSize").value + "px";
+
+    const marginLeft = document.getElementById("marginLeft").value + "px";
+    const marginRight = document.getElementById("marginRight").value + "px";
+    const footerSpacing = document.getElementById("footerSpacing").value + "px";
+
+    const useWatermark = document.getElementById("useWatermark").checked;
+    const watermarkText = document.getElementById("watermarkText").value;
+
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    // Show cover page
+    if (coverImageSrc) {
+      const coverPage = document.createElement("div");
+      coverPage.className = "page";
+      coverPage.style.fontFamily = fontFamily;
+      coverPage.style.fontSize = fontSize;
+      coverPage.style.textAlign = "center";
+      coverPage.style.padding = "100px 20px";
+      coverPage.style.position = "relative";
+      coverPage.style.width = "512px";
+      coverPage.style.height = "800px";
+      coverPage.style.margin = "auto";
+
+      coverPage.innerHTML = `<img src="${coverImageSrc}" style="max-width:100%;margin:auto;display:block;"><br/><br/>`;
+      if (includeMeta) {
+        coverPage.innerHTML += `<h2>${bookTitle}</h2><p>${authorName}</p>`;
+      }
+
+      if (useWatermark) {
+        coverPage.innerHTML += `
+          <div class="watermark" style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            opacity: 0.1;
+            font-size: 30px;
+            pointer-events: none;
+            user-select: none;
+            z-index: 10;
+            white-space: nowrap;
+          ">
+            ${watermarkText}
+          </div>
+        `;
+      }
+
+      preview.appendChild(coverPage);
+    }
+
+    const chapters = autoDetectChapters(cleaned);
+
+    chapters.forEach((chapter, idx) => {
+      const chapterPages = splitIntoPages(chapter.content, 500);
+
+      chapterPages.forEach((page, i) => {
+        const div = document.createElement("div");
+        div.className = "page";
+        div.style.fontFamily = fontFamily;
+        div.style.fontSize = fontSize;
+        div.style.width = "512px";
+        div.style.height = "800px";
+        div.style.margin = "auto";
+        div.style.position = "relative";
+
+        const paras = page.content.map(p => `<p>${p}</p>`).join("");
+        div.innerHTML = `<div class="content">${paras}</div>`;
+
+        if (useWatermark) {
+          div.innerHTML += `
+            <div class="watermark" style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(45deg);
+              opacity: 0.1;
+              font-size: 30px;
+              pointer-events: none;
+              user-select: none;
+              z-index: 10;
+              white-space: nowrap;
+            ">
+              ${watermarkText}
+            </div>
+          `;
+        }
+
+        if (includeMeta) {
+          div.innerHTML += `
+            <div class="footer">
+              <span>${bookTitle} - ${authorName}</span>
+              <span>Halaman ${(idx * 10 + i + 1)}</span>
+            </div>
+          `;
+        }
+
+        preview.appendChild(div);
+      });
+    });
+  }
+
+  async function exportSelected() {
+    const exportOption = document.querySelector('input[name="exportType"]:checked')?.value;
+    if (!exportOption) return alert("Please choose an export option");
+
+    const addWatermark = document.getElementById("useWatermark").checked;
+    const watermarkText = document.getElementById("watermarkText").value || "Bandar Deterjen";
+    const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
+    const fileName = bookTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + "_";
+
+    const pages = Array.from(document.querySelectorAll(".page"));
+
+    if (exportOption.startsWith("pdf")) {
+      if (exportOption === "pdf-per-page") {
+        for (let i = 0; i < pages.length; i++) {
+          const canvas = await html2canvas(pages[i], { scale: 2 });
+          const imgData = canvas.toDataURL('image/png');
+
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF("p", "pt", [512, 800]);
+
+          doc.addImage(imgData, 'PNG', 0, 0, 512, 800);
+          doc.save(`${fileName}page_${i + 1}.pdf`);
+        }
+        alert("Exported individual PDF pages");
+
+      } else if (exportOption === "pdf-single") {
+        const fullDoc = new jsPDF("p", "pt", [512, 800]);
+        for (let i = 0; i < pages.length; i++) {
+          const canvas = await html2canvas(pages[i], { scale: 2 });
+          const imgData = canvas.toDataURL('image/png');
+
+          if (i !== 0) fullDoc.addPage();
+          fullDoc.addImage(imgData, 'PNG', 0, 0, 512, 800);
+        }
+        fullDoc.save(`${fileName}full.pdf`);
+        alert("Exported single PDF file");
+
+      } else if (exportOption === "pdf-zip") {
+        const zip = new JSZip();
+        const folder = zip.folder("pdf");
+
+        for (let i = 0; i < pages.length; i++) {
+          const canvas = await html2canvas(pages[i], { scale: 2 });
+          const imgData = canvas.toDataURL('image/png');
+
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF("p", "pt", [512, 800]);
+          doc.addImage(imgData, 'PNG', 0, 0, 512, 800);
+          folder.file(`page_${i + 1}.pdf`, doc.output("blob"), { binary: true });
+        }
+
+        const blob = await zip.generateAsync({type:"blob"});
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${fileName}pages.zip`;
+        link.click();
+
+        alert("Exported all PDF pages in ZIP");
+
+      } else if (exportOption.startsWith("png")) {
+        if (exportOption === "png-per-page") {
+          for (let i = 0; i < pages.length; i++) {
+            const canvas = await html2canvas(pages[i], { scale: 2 });
+            const ctx = canvas.getContext("2d");
+
+            if (addWatermark) {
+              ctx.save();
+              ctx.translate(canvas.width / 2, canvas.height / 2);
+              ctx.rotate(Math.PI / 4); // 45 degrees
+              ctx.fillStyle = "rgba(0,0,0,0.1)";
+              ctx.font = "bold 30px Arial";
+              ctx.textAlign = "center";
+              ctx.fillText(watermarkText, 0, 0);
+              ctx.restore();
+            }
+
+            const link = document.createElement("a");
+            link.href = canvas.toDataURL("image/png");
+            link.download = `${fileName}page_${i + 1}.png`;
+            link.click();
+          }
+          alert("Exported individual PNG files");
+
+        } else if (exportOption === "png-zip") {
+          const zip = new JSZip();
+          const pngFolder = zip.folder("png");
+
+          for (let i = 0; i < pages.length; i++) {
+            const canvas = await html2canvas(pages[i], { scale: 2 });
+            const ctx = canvas.getContext("2d");
+
+            if (addWatermark) {
+              ctx.save();
+              ctx.translate(canvas.width / 2, canvas.height / 2);
+              ctx.rotate(Math.PI / 4); // 45° rotation
+              ctx.fillStyle = "rgba(0,0,0,0.1)";
+              ctx.font = "bold 30px Arial";
+              ctx.textAlign = "center";
+              ctx.fillText(watermarkText, 0, 0);
+              ctx.restore();
+            }
+
+            const dataUrl = canvas.toDataURL("image/png");
+            pngFolder.file(`page_${i + 1}.png`, dataUrl.replace(/^.*?,/, ""), { base64: true });
+          }
+
+          const content = await zip.generateAsync({type:"blob"});
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(content);
+          link.download = `${fileName}png_pages.zip`;
+          link.click();
+
+          alert("Exported all PNG pages in ZIP");
+        }
+      }
+    }
+
+    // Apply font settings live
+    document.getElementById("fontFamily").onchange = cleanAndPaginate;
+    document.getElementById("fontSize").onchange = cleanAndPaginate;
+    document.getElementById("includeMeta").onchange = cleanAndPaginate;
+    document.getElementById("useWatermark").onchange = cleanAndPaginate;
+    document.getElementById("watermarkText").oninput = cleanAndPaginate;
+    document.getElementById("bookTitle").oninput = cleanAndPaginate;
+    document.getElementById("authorName").oninput = cleanAndPaginate;
+
+    // Auto-hide metadata section
+    document.getElementById("includeMeta").addEventListener("change", function () {
+      document.getElementById("metaSection").style.display = this.checked ? "" : "none";
+    });
+
+    document.getElementById("includeMeta").dispatchEvent(new Event("change"));
+  </script>
+
+</body>
+</html>
