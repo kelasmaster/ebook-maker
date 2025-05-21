@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <title>Ebook Creator Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  
+
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto :wght@400;500&family=Merriweather&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto :wght@300;400;500&display=swap" rel="stylesheet">
 
   <style>
     body {
@@ -33,8 +33,8 @@
     .sidebar, .main-content {
       background: white;
       border-radius: 8px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
       padding: 20px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
     .sidebar {
@@ -48,6 +48,7 @@
     }
 
     h2, h3 {
+      margin-top: 0;
       margin-bottom: 15px;
       font-weight: 500;
     }
@@ -56,10 +57,11 @@
       width: 100%;
       height: 300px;
       padding: 12px;
+      font-size: 14px;
       resize: vertical;
-      font-size: 15px;
       border: 1px solid #ccc;
-      border-radius: 8px;
+      border-radius: 6px;
+      margin-bottom: 15px;
       font-family: inherit;
     }
 
@@ -67,7 +69,6 @@
       display: block;
       margin-bottom: 5px;
       font-weight: 500;
-      font-size: 14px;
     }
 
     input[type="text"],
@@ -76,13 +77,14 @@
     input[type="color"] {
       width: 100%;
       padding: 8px;
-      font-size: 14px;
+      margin-bottom: 10px;
       border: 1px solid #ddd;
-      border-radius: 6px;
+      border-radius: 4px;
     }
 
     input[type="checkbox"] {
       transform: scale(1.2);
+      margin-right: 8px;
     }
 
     button {
@@ -94,6 +96,7 @@
       cursor: pointer;
       font-size: 14px;
       transition: all 0.3s ease;
+      margin-right: 10px;
     }
 
     button:hover {
@@ -103,8 +106,8 @@
     .btn-group {
       display: flex;
       gap: 10px;
-      flex-wrap: wrap;
       margin-top: 15px;
+      flex-wrap: wrap;
     }
 
     .form-group {
@@ -117,8 +120,7 @@
       min-height: 400px;
       padding: 20px;
       overflow-y: auto;
-      border-radius: 8px;
-      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
     .page {
@@ -128,9 +130,10 @@
       padding: 40px;
       border-radius: 8px;
       background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-      width: 600px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
       min-height: 800px;
+      max-width: 600px;
+      font-size: 14px;
     }
 
     .content {
@@ -159,7 +162,7 @@
       padding: 30px;
       text-align: center;
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.3s ease;
     }
 
     .file-upload:hover {
@@ -171,9 +174,9 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #4caf50;
+      padding: 15px 20px;
+      background-color: #4caf50;
       color: white;
-      padding: 12px 20px;
       border-radius: 6px;
       z-index: 1000;
       opacity: 0;
@@ -187,18 +190,45 @@
     }
 
     .notification.error {
-      background: #f44336;
+      background-color: #f44336;
     }
 
     .notification.warning {
-      background: #ff9800;
+      background-color: #ff9800;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .tab.active {
+      border-bottom-color: #4361ee;
+      color: #4361ee;
+      font-weight: bold;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
     }
 
     .spinner {
       display: none;
       width: 40px;
       height: 40px;
-      border: 4px solid #f1f1f1;
+      border: 4px solid rgba(0, 0, 0, 0.1);
       border-left-color: #4361ee;
       border-radius: 50%;
       animation: spin 1s linear infinite;
@@ -216,17 +246,21 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <h2>Import Content</h2>
-    <div class="file-upload" id="dropZone">Drag & drop .txt file here or click to upload</div>
+    <div class="file-upload" id="dropZone">
+      <p>📄 Drag & drop .txt file here or click to upload</p>
+    </div>
     <input type="file" id="txtFile" accept=".txt" style="display:none" onchange="handleTextUpload(event)" />
 
     <h3>Cover Image</h3>
-    <div class="file-upload" id="coverDropZone">Upload ebook cover</div>
+    <div class="file-upload" id="coverDropZone">
+      <p>🖼️ Drag & drop ebook cover here or click to upload</p>
+    </div>
     <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="handleCoverUpload(event)">
-    <div id="coverPreview" style="margin-top: 15px;"></div>
+    <div id="coverPreview" style="margin-top:15px;"></div>
 
     <h3>Book Info</h3>
     <label>Title:
-      <input type="text" id="bookTitle" placeholder="Book Title" oninput="generateEbook()">
+      <input type="text" id="bookTitle" placeholder="Ebook Title" oninput="generateEbook()">
     </label>
     <label>Author:
       <input type="text" id="authorName" placeholder="Author Name" oninput="generateEbook()">
@@ -250,8 +284,9 @@
         <option value="'Times New Roman', serif">Times New Roman</option>
         <option value="'Arial', sans-serif">Arial</option>
         <option value="'Courier New', monospace">Courier New</option>
-        <option value="'Merriweather', serif">Merriweather</option>
         <option value="'Roboto', sans-serif">Roboto</option>
+        <option value="'Merriweather', serif">Merriweather</option>
+        <option value="'Source Code Pro', monospace">Source Code Pro</option>
       </select>
     </label>
     <label>Font Size:
@@ -290,26 +325,34 @@
       <input type="text" id="fileNamePattern" value="{title}_{page}">
     </label>
     <small>Available: `{title}`, `{author}`, `{date}`, `{page}`</small>
-    <button onclick="exportEbook()" style="margin-top:15px;">Export Ebook</button>
   </aside>
 
   <!-- Main Content -->
   <main class="main-content">
     <div class="card">
-      <h2>Editor</h2>
-      <textarea id="inputText" placeholder="Paste your text here..."></textarea>
-      <div class="btn-group">
-        <button onclick="cleanText()">Clean Text</button>
-        <button onclick="removeSymbols()">Remove Symbols</button>
-        <button onclick="formatParagraphs()">Format Paragraphs</button>
+      <div class="tabs">
+        <div class="tab active" data-tab="editor">Editor</div>
+        <div class="tab" data-tab="preview">Preview</div>
+      </div>
+      <div class="tab-content active" id="editor">
+        <div class="editor-toolbar btn-group">
+          <button onclick="cleanText()">Clean Text</button>
+          <button onclick="removeSymbols()">Remove Symbols</button>
+          <button onclick="formatParagraphs()">Format Paragraphs</button>
+        </div>
+        <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+      </div>
+      <div class="tab-content" id="preview">
+        <div id="preview" class="preview-container"></div>
+        <div class="spinner" id="previewSpinner"></div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Preview</h2>
-      <div class="preview-container">
-        <div id="preview" class="preview-container"></div>
-        <div class="spinner" id="previewSpinner"></div>
+      <h3>Generate & Export</h3>
+      <div class="btn-group">
+        <button onclick="generateEbook()" id="generateBtn">Generate Preview</button>
+        <button onclick="exportEbook()" id="exportBtn">Export Ebook</button>
       </div>
     </div>
   </main>
@@ -324,63 +367,71 @@
   let coverImageSrc = "";
   let pages = [];
 
-  // Setup event listeners
-  document.addEventListener("DOMContentLoaded", function() {
-    setupDragAndDrop();
-    setupCoverUpload();
-    document.getElementById("useWatermark").onchange = () => {
-      document.getElementById("watermarkText").disabled = !document.getElementById("useWatermark").checked;
-    };
+  // DOM Elements
+  const dropZone = document.getElementById("dropZone");
+  const coverDropZone = document.getElementById("coverDropZone");
+  const txtFileInput = document.getElementById("txtFile");
+  const imgInput = document.getElementById("imgInput");
+  const previewSpinner = document.getElementById("previewSpinner");
+  const notification = document.getElementById("notification");
+
+  // Initialize event listeners
+  document.addEventListener("DOMContentLoaded", function () {
+    setupEventListeners();
+    setupTabs();
   });
 
+  function setupTabs() {
+    const tabs = document.querySelectorAll(".tab");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", function () {
+        tabs.forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+        this.classList.add("active");
+        const tabId = this.getAttribute("data-tab");
+        document.getElementById(tabId).classList.add("active");
+      });
+    });
+  }
+
   function showNotification(message, type = "success") {
-    const notification = document.getElementById("notification");
     notification.textContent = message;
     notification.className = "notification " + type;
     notification.classList.add("show");
     setTimeout(() => notification.classList.remove("show"), 3000);
   }
 
-  // File Upload Logic
-  function setupDragAndDrop() {
-    const dropZone = document.getElementById("dropZone");
-    const txtFile = document.getElementById("txtFile");
+  function setupEventListeners() {
+    // Text File Upload
+    dropZone.addEventListener("click", () => txtFileInput.click());
+    txtFileInput.addEventListener("change", handleTextUpload);
 
-    dropZone.addEventListener("click", () => txtFile.click());
     dropZone.addEventListener("dragover", e => {
       e.preventDefault();
       dropZone.style.borderColor = "#4361ee";
       dropZone.style.backgroundColor = "rgba(67, 97, 238, 0.05)";
     });
+
     dropZone.addEventListener("dragleave", () => {
       dropZone.style.borderColor = "#ccc";
-      dropZone.style.backgroundColor = "white";
+      dropZone.style.backgroundColor = "transparent";
     });
+
     dropZone.addEventListener("drop", e => {
       e.preventDefault();
       dropZone.style.borderColor = "#ccc";
-      dropZone.style.backgroundColor = "white";
-
+      dropZone.style.backgroundColor = "transparent";
       const file = e.dataTransfer.files[0];
-      if (!file || file.type !== "text/plain") {
+      if (file && file.type === "text/plain") {
+        txtFileInput.files = e.dataTransfer.files;
+        handleTextUpload({ target: txtFileInput });
+      } else {
         showNotification("Please upload a valid .txt file", "error");
-        return;
       }
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        originalText = e.target.result;
-        document.getElementById("inputText").value = originalText;
-        showNotification("Text loaded successfully!");
-      };
-      reader.readAsText(file);
     });
-  }
 
-  function setupCoverUpload() {
-    const coverDropZone = document.getElementById("coverDropZone");
-    const imgInput = document.getElementById("imgInput");
-
+    // Cover Image Upload
     coverDropZone.addEventListener("click", () => imgInput.click());
 
     coverDropZone.addEventListener("dragover", e => {
@@ -391,106 +442,130 @@
 
     coverDropZone.addEventListener("dragleave", () => {
       coverDropZone.style.borderColor = "#ccc";
-      coverDropZone.style.backgroundColor = "white";
+      coverDropZone.style.backgroundColor = "transparent";
     });
 
     coverDropZone.addEventListener("drop", e => {
       e.preventDefault();
       coverDropZone.style.borderColor = "#ccc";
-      coverDropZone.style.backgroundColor = "white";
-
+      coverDropZone.style.backgroundColor = "transparent";
       const file = e.dataTransfer.files[0];
-      if (!file || !file.type.startsWith("image/")) {
+      if (file && file.type.startsWith("image/")) {
+        imgInput.files = e.dataTransfer.files;
+        handleCoverUpload({ target: imgInput });
+      } else {
         showNotification("Please upload a valid image file", "error");
-        return;
       }
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        coverImageSrc = e.target.result;
-        const preview = document.getElementById("coverPreview");
-        preview.innerHTML = `
-          <img src="${coverImageSrc}" alt="Cover" style="max-width:100%;border-radius:6px;">
-          <button onclick="removeCover()">Remove Cover</button>
-        `;
-        generateEbook();
-      };
-      reader.readAsDataURL(file);
     });
+  }
+
+  function handleTextUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file || file.type !== "text/plain") return showNotification("Invalid text file", "error");
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      originalText = e.target.result;
+      currentText = originalText;
+      document.getElementById("inputText").value = originalText;
+      showNotification("Text loaded successfully!", "success");
+    };
+    reader.readAsText(file);
+  }
+
+  function handleCoverUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return showNotification("Please upload a valid image", "error");
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      coverImageSrc = e.target.result;
+      const preview = document.getElementById("coverPreview");
+      preview.innerHTML = `
+        <img src="${coverImageSrc}" alt="Cover" style="max-width:100%;border-radius:6px;">
+        <button onclick="removeCover()" style="margin-top:10px;width:100%">Remove Cover</button>
+      `;
+      showNotification("Cover uploaded!", "success");
+    };
+    reader.readAsDataURL(file);
   }
 
   function removeCover() {
     coverImageSrc = "";
     document.getElementById("coverPreview").innerHTML = "";
-    document.getElementById("imgInput").value = "";
+    imgInput.value = "";
     showNotification("Cover removed", "warning");
   }
 
-  // Text Cleaning Tools
-  function cleanText(input) {
-    return input
-      .replace(/[^\S\n]{2,}/g, ' ')
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF/g, '');
+  // Text Cleaning Functions
+  function cleanText() {
+    const input = document.getElementById("inputText").value;
+    if (!input.trim()) return showNotification("No text to clean", "error");
+
+    let cleaned = input
+      .replace(/\r\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[^\S\n]{2,}/g, " ")
+      .trim();
+
+    document.getElementById("inputText").value = cleaned;
+    showNotification("Text cleaned successfully!");
   }
 
   function removeSymbols() {
     const input = document.getElementById("inputText").value;
-    if (!input.trim()) return showNotification("Please paste some text first.", "error");
+    if (!input.trim()) return showNotification("No text to process", "error");
 
     const symbolsToRemove = /[`~^*+|<>{}_—–]/g;
-    const cleaned = input.replace(symbolsToRemove, '');
+    let cleaned = input.replace(symbolsToRemove, '');
     document.getElementById("inputText").value = cleaned;
-    showNotification("Unnecessary symbols removed.");
+    showNotification("Unwanted symbols removed.");
   }
 
   function formatParagraphs() {
     const input = document.getElementById("inputText").value;
-    if (!input.trim()) return showNotification("Please paste some text first.", "error");
+    if (!input.trim()) return showNotification("No text to format", "error");
 
-    const formatted = input
+    let formatted = input
       .split(/\n\s*\n/)
-      .filter(p => p.trim().length > 0)
+      .map(p => p.trim())
+      .filter(p => p.length > 0)
       .join("\n\n");
+
     document.getElementById("inputText").value = formatted;
-    showNotification("Paragraphs formatted successfully.");
+    showNotification("Paragraphs formatted successfully!");
   }
 
   // Ebook Generation
   function generateEbook() {
     const input = document.getElementById("inputText").value;
-    if (!input.trim()) return showNotification("Please paste or upload some text first.", "error");
+    if (!input.trim()) return showNotification("Please paste some text first", "error");
 
-    originalText = input;
-    currentText = cleanText(originalText);
+    // Show loading spinner
+    previewSpinner.style.display = "block";
 
-    const bookTitle = document.getElementById("bookTitle").value || "Untitled";
-    const authorName = document.getElementById("authorName").value || "Unknown Author";
-    const includeMeta = document.getElementById("includeMeta").checked;
-    const fontFamily = document.getElementById("fontFamily").value;
-    const fontSize = document.getElementById("fontSize").value + "px";
-    const lineHeight = document.getElementById("lineHeight").value;
-    const txtColor = document.getElementById("txtColor").value;
-    const marginTop = document.getElementById("marginTop").value + "px";
-    const marginBottom = document.getElementById("marginBottom").value + "px";
-    const marginLeft = document.getElementById("marginLeft").value + "px";
-    const marginRight = document.getElementById("marginRight").value + "px";
-    const pageWidth = document.getElementById("pageWidth").value + "px";
-    const pageHeight = document.getElementById("pageHeight").value + "px";
-
-    const preview = document.getElementById("preview");
-    preview.innerHTML = "";
-
-    // Show spinner while generating
-    const spinner = document.getElementById("previewSpinner");
-    spinner.style.display = "block";
-
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        // Split into chapters
-        const chapters = autoDetectChapters(currentText);
+        // Clear previous pages
+        document.getElementById("preview").innerHTML = "";
+        currentText = cleanTextForProcessing(input);
 
-        // Create cover page if cover image exists
+        const bookTitle = document.getElementById("bookTitle").value || "Untitled";
+        const authorName = document.getElementById("authorName").value || "Unknown Author";
+        const includeMeta = document.getElementById("includeMeta").checked;
+        const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
+        const fontFamily = document.getElementById("fontFamily").value;
+        const fontSize = document.getElementById("fontSize").value + "px";
+        const lineHeight = document.getElementById("lineHeight").value;
+        const txtColor = document.getElementById("txtColor").value;
+        const marginTop = document.getElementById("marginTop").value + "px";
+        const marginBottom = document.getElementById("marginBottom").value + "px";
+        const marginLeft = document.getElementById("marginLeft").value + "px";
+        const marginRight = document.getElementById("marginRight").value + "px";
+        const pageWidth = document.getElementById("pageWidth").value + "px";
+        const pageHeight = document.getElementById("pageHeight").value + "px";
+
+        // Create cover page if available
         if (coverImageSrc) {
           const coverPage = document.createElement("div");
           coverPage.className = "page";
@@ -507,14 +582,20 @@
           if (includeMeta) {
             coverPage.innerHTML += `<h2>${bookTitle}</h2><p>by ${authorName}</p>`;
           }
-          preview.appendChild(coverPage);
+
+          document.getElementById("preview").appendChild(coverPage);
         }
 
-        // Generate content pages
-        chapters.forEach((chapter, idx) => {
-          const chapterPages = splitIntoPages(chapter.content, parseInt(document.getElementById("wordCount").value) || 500);
+        // Split into chapters
+        const chapters = autoDetectChapters(currentText);
 
-          chapterPages.forEach((page, i) => {
+        // Generate pages
+        for (let i = 0; i < chapters.length; i++) {
+          const chapter = chapters[i];
+          const chapterPages = splitIntoPages(chapter.content, wordsPerPage);
+          for (let j = 0; j < chapterPages.length; j++) {
+            const page = chapterPages[j];
+
             const div = document.createElement("div");
             div.className = "page";
             div.style.width = pageWidth;
@@ -525,8 +606,8 @@
             div.style.lineHeight = lineHeight;
             div.style.padding = `${marginTop} ${marginRight} ${marginBottom} ${marginLeft}`;
 
-            // Chapter title only on first page of chapter
-            if (i === 0 && chapter.title !== "Untitled") {
+            // Chapter title only on first page
+            if (j === 0 && chapter.title !== "Untitled") {
               div.innerHTML += `<h2 style="text-align:center;margin-bottom:30px">${chapter.title}</h2>`;
             }
 
@@ -538,30 +619,42 @@
               div.innerHTML += `
                 <div class="footer">
                   <span>${bookTitle} - ${authorName}</span>
-                  <span>Page ${(pages.length + 1)}</span>
+                  <span>Halaman ${(pages.length + 1)}</span>
                 </div>
               `;
             }
 
-            preview.appendChild(div);
-
-            // Store for export
+            document.getElementById("preview").appendChild(div);
             pages.push({
               element: div,
               content: page.content,
               pageNumber: pages.length + 1
             });
-          });
-        });
+          }
+        }
 
-        spinner.style.display = "none";
-        showNotification("Ebook generated!", "success");
+        previewSpinner.style.display = "none";
+        showNotification("Ebook generated successfully!");
+
+        // Switch to preview tab
+        document.querySelector('.tab[data-tab="preview"]').click();
+
       } catch (err) {
-        spinner.style.display = "none";
-        showNotification("Error: " + err.message, "error");
+        previewSpinner.style.display = "none";
+        showNotification("Error generating ebook: " + err.message, "error");
         console.error(err);
       }
     }, 100);
+  }
+
+  function cleanTextForProcessing(text) {
+    return text
+      .replace(/[`~^*+|<>{}_—–]/g, '')
+      .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF/g, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[^\S\n]{2,}/g, ' ')
+      .trim();
   }
 
   function autoDetectChapters(text) {
@@ -570,7 +663,7 @@
     let currentChapter = { title: "Untitled", content: [] };
 
     for (let line of lines) {
-      const match = line.match(/^#\s*(.+)$/);
+      const match = line.match(/^#\s*(.+)$/i);
       if (match) {
         if (currentChapter.title !== "Untitled") result.push(currentChapter);
         currentChapter = { title: match[1].trim(), content: [] };
@@ -579,40 +672,46 @@
       }
     }
 
-    if (currentChapter.content.length > 0) result.push(currentChapter);
+    if (currentChapter.content.length > 0 || currentChapter.title !== "Untitled") {
+      result.push(currentChapter);
+    }
+
     return result;
   }
 
   function splitIntoPages(content, wordsPerPage = 500) {
-    const paragraphs = content.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
+    const paragraphs = content.join('\n').split(/\n{2,}/).filter(p => p.trim().length > 0);
     const result = [];
     let currentPage = { content: [], wordCount: 0 };
 
-    paragraphs.forEach(para => {
-      const paraWords = para.split(/\s+/).length;
+    for (let para of paragraphs) {
+      const paraWords = para.trim().split(/\s+/).length;
 
-      if (currentPage.wordCount + paraWords > wordsPerPage && currentPage.content.length > 0) {
-        result.push({ content: currentPage.content.join("\n\n") });
+      if (currentPage.wordCount + paraWords > wordsPerPage && currentPage.wordCount > 0) {
+        result.push({
+          content: currentPage.content.join('\n'),
+          wordCount: currentPage.wordCount
+        });
         currentPage = { content: [para], wordCount: paraWords };
       } else {
         currentPage.content.push(para);
         currentPage.wordCount += paraWords;
       }
-    });
+    }
 
     if (currentPage.content.length > 0) {
-      result.push({ content: currentPage.content.join("\n\n") });
+      result.push({
+        content: currentPage.content.join('\n'),
+        wordCount: currentPage.wordCount
+      });
     }
 
     return result;
   }
 
-  // Export Function
+  // Export Functions
   async function exportEbook() {
-    if (pages.length === 0) {
-      showNotification("Please generate the ebook first", "error");
-      return;
-    }
+    if (pages.length === 0) return showNotification("Please generate the ebook first.", "error");
 
     const exportPDF = document.getElementById("exportPDF").checked;
     const exportPNG = document.getElementById("exportPNG").checked;
@@ -626,84 +725,89 @@
 
     function formatFileName(pageNum = null) {
       return fileNamePattern
-        .replace(/{title}/g, bookTitle.replace(/[^a-z0-9]+/gi, '-'))
-        .replace(/{author}/g, authorName.replace(/[^a-z0-9]+/gi, '-'))
+        .replace(/{title}/g, bookTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+        .replace(/{author}/g, authorName.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
         .replace(/{page}/g, pageNum ? `page_${pageNum}` : '')
         .replace(/{date}/g, now);
     }
 
     const zip = new JSZip();
 
-    if (exportPDF) {
-      const pdfFolder = zip.folder("pdf");
-      const doc = new jsPDF("p", "pt", "a4");
+    if ((exportPDF && exportPNG) || (exportPDF && exportTXT) || (exportPNG && exportTXT)) {
+      if (exportPDF) {
+        const pdfFolder = zip.folder("pdf");
+        const doc = new jsPDF("p", "pt", "a4");
 
-      for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i].element, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const width = doc.internal.pageSize.getWidth();
-        const height = (canvas.height * width) / canvas.width;
+        for (let i = 0; i < pages.length; i++) {
+          const canvas = await html2canvas(pages[i].element, { scale: 2 });
+          const imgData = canvas.toDataURL("image/png");
+          const width = doc.internal.pageSize.getWidth();
+          const height = (canvas.height * width) / canvas.width;
 
-        if (i !== 0) doc.addPage();
-        doc.addImage(imgData, 'PNG', 0, 0, width, height);
-      }
-
-      pdfFolder.file(`${formatFileName()}.pdf`, doc.output("blob"), { binary: true });
-    }
-
-    if (exportPNG) {
-      const pngFolder = zip.folder("png");
-
-      for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i].element, { scale: 2 });
-        const ctx = canvas.getContext("2d");
-
-        if (addWatermark) {
-          ctx.save();
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate(Math.PI / 4); // 45°
-          ctx.fillStyle = "rgba(0,0,0,0.1)";
-          ctx.font = "bold 30px Arial";
-          ctx.fillText(watermarkText, 0, 0);
-          ctx.restore();
+          if (i !== 0) doc.addPage();
+          doc.addImage(imgData, "PNG", 0, 0, width, height);
         }
 
-        const dataUrl = canvas.toDataURL("image/png");
-        pngFolder.file(`${formatFileName(i + 1)}.png`, dataUrl.replace(/^.*?,/, ""), { base64: true });
+        pdfFolder.file(`${formatFileName()}.pdf`, doc.output("blob"), { binary: true });
       }
-    }
 
-    if (exportTXT) {
-      const txtFolder = zip.folder("txt");
-      let fullText = "";
-      pages.forEach(p => {
-        fullText += `--- Page ${p.pageNumber} ---
+      if (exportPNG) {
+        const pngFolder = zip.folder("png");
+
+        for (let i = 0; i < pages.length; i++) {
+          const canvas = await html2canvas(pages[i].element, { scale: 2 });
+          const ctx = canvas.getContext("2d");
+
+          if (addWatermark) {
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(Math.PI / 4); // 45 degrees
+            ctx.fillStyle = "rgba(0,0,0,0.1)";
+            ctx.font = "bold 30px Arial";
+            ctx.fillText(watermarkText, 0, 0);
+            ctx.restore();
+          }
+
+          const dataUrl = canvas.toDataURL("image/png").replace(/^.*?,/, "");
+          pngFolder.file(`${formatFileName(i + 1)}.png`, dataUrl, { base64: true });
+        }
+      }
+
+      if (exportTXT) {
+        const txtFolder = zip.folder("txt");
+        let fullText = "";
+
+        pages.forEach(p => {
+          fullText += `--- Page ${p.pageNumber} ---
 ${p.content}
-`;
-      });
-      txtFolder.file(`${formatFileName()}.txt`, fullText);
-    }
 
-    if ((exportPDF || exportPNG || exportTXT) && (exportPDF && exportPNG)) {
+`;
+        });
+
+        txtFolder.file(`${formatFileName()}.txt`, fullText);
+      }
+
       const blob = await zip.generateAsync({ type: "blob" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `${formatFileName()}_ebook.zip`;
       link.click();
-      showNotification("All files exported in ZIP", "success");
+      showNotification("All formats exported in ZIP!", "success");
+
     } else {
       if (exportPDF) {
         const doc = new jsPDF("p", "pt", "a4");
         for (let i = 0; i < pages.length; i++) {
           const canvas = await html2canvas(pages[i].element, { scale: 2 });
-          const imgData = canvas.toDataURL('image/png');
+          const imgData = canvas.toDataURL("image/png");
           const width = doc.internal.pageSize.getWidth();
           const height = (canvas.height * width) / canvas.width;
+
           if (i !== 0) doc.addPage();
-          doc.addImage(imgData, 'PNG', 0, 0, width, height);
+          doc.addImage(imgData, "PNG", 0, 0, width, height);
         }
         doc.save(`${formatFileName()}.pdf`);
-        showNotification("PDF exported", "success");
+        showNotification("PDF exported successfully!", "success");
       }
 
       if (exportPNG) {
@@ -714,7 +818,7 @@ ${p.content}
           if (addWatermark) {
             ctx.save();
             ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(Math.PI / 4); // 45°
+            ctx.rotate(Math.PI / 4);
             ctx.fillStyle = "rgba(0,0,0,0.1)";
             ctx.font = "bold 30px Arial";
             ctx.textAlign = "center";
@@ -727,7 +831,7 @@ ${p.content}
           link.download = `${formatFileName(i + 1)}.png`;
           link.click();
         }
-        showNotification("PNG pages exported", "success");
+        showNotification("PNG pages exported successfully!", "success");
       }
 
       if (exportTXT) {
@@ -735,15 +839,15 @@ ${p.content}
         pages.forEach(p => {
           fullText += `--- Page ${p.pageNumber} ---
 ${p.content}
+
 `;
         });
 
-        const blob = new Blob([fullText], { type: "text/plain" });
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
+        link.href = URL.createObjectURL(new Blob([fullText], { type: "text/plain" }));
         link.download = `${formatFileName()}.txt`;
         link.click();
-        showNotification("TXT exported", "success");
+        showNotification("TXT exported successfully!", "success");
       }
     }
   }
