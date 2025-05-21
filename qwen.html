@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ebook Creator Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto :wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f4f4;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .sidebar, .main-content {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    .sidebar {
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .main-content {
+      flex: 2;
+      min-width: 300px;
+    }
+
+    h2, h3 {
+      margin-top: 0;
+    }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 12px;
+      font-size: 14px;
+      resize: vertical;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    input[type="color"] {
+      width: 100%;
+      padding: 6px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.2);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    button {
+      padding: 10px 15px;
+      background-color: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #3f37c9;
+    }
+
+    .preview-container {
+      border: 1px solid #ccc;
+      background: white;
+      padding: 20px;
+      min-height: 500px;
+      overflow-y: auto;
+    }
+
+    .page {
+      position: relative;
+      margin: 0 auto 30px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      break-after: page;
+    }
+
+    .content {
+      white-space: pre-wrap;
+      line-height: 1.6;
+      hyphens: auto;
+    }
+
+    .footer {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      right: 40px;
+      font-size: 12px;
+      color: #666;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4caf50;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 4px;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: translateX(100%);
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .notification.error { background-color: #f44336; }
+    .notification.warning { background-color: #ff9800; }
+    .notification.success { background-color: #4caf50; }
+
+    .file-upload {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .file-upload:hover {
+      border-color: #4361ee;
+      background: #eef3fe;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 15px;
+    }
+
+    .tab {
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tab.active {
+      border-bottom-color: #4361ee;
+      color: #4361ee;
+      font-weight: bold;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .spinner {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f1f1f1;
+      border-left-color: #4361ee;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h3>Import Content</h3>
+    <div class="file-upload" id="dropZone">Drag & drop .txt file here or click to upload</div>
+    <input type="file" id="txtFile" accept=".txt" style="display:none" onchange="handleTextUpload(event)" />
+
+    <h3>Cover Image</h3>
+    <div class="file-upload" id="coverDropZone">Upload ebook cover</div>
+    <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="handleCoverUpload(event)">
+    <div id="coverPreview" style="margin-top:10px;"></div>
+
+    <h3>Book Info</h3>
+    <div class="form-group">
+      <label>Title:
+        <input type="text" id="bookTitle" placeholder="Ebook Title" oninput="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Author:
+        <input type="text" id="authorName" placeholder="Author Name" oninput="generateEbook()">
+      </label>
+    </div>
+    <label><input type="checkbox" id="includeMeta" checked onchange="generateEbook()"> Include Title & Author</label>
+
+    <h3>Page Settings</h3>
+    <div class="form-group">
+      <label>Width:
+        <input type="number" id="pageWidth" value="512" onchange="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Height:
+        <input type="number" id="pageHeight" value="800" onchange="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Words per Page:
+        <input type="number" id="wordCount" value="500" onchange="generateEbook()">
+      </label>
+    </div>
+
+    <h3>Typography</h3>
+    <div class="form-group">
+      <label>Font Family:
+        <select id="fontFamily" onchange="generateEbook()">
+          <option value="'Times New Roman', serif">Times New Roman</option>
+          <option value="'Arial', sans-serif">Arial</option>
+          <option value="'Courier New', monospace">Courier New</option>
+          <option value="'Roboto', sans-serif">Roboto</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Font Size:
+        <input type="number" id="fontSize" value="14" onchange="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Line Height:
+        <input type="number" id="lineHeight" value="1.6" step="0.1" onchange="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Text Color:
+        <input type="color" id="txtColor" value="#333333" onchange="generateEbook()">
+      </label>
+    </div>
+
+    <h3>Margins & Spacing</h3>
+    <div class="form-group">
+      <label>Top Margin:
+        <input type="number" id="marginTop" value="40" onchange="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Bottom Margin:
+        <input type="number" id="marginBottom" value="60" onchange="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Left Margin:
+        <input type="number" id="marginLeft" value="40" onchange="generateEbook()">
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Right Margin:
+        <input type="number" id="marginRight" value="40" onchange="generateEbook()">
+      </label>
+    </div>
+
+    <h3>Export Options</h3>
+    <label><input type="checkbox" id="exportPDF" checked> Export as PDF</label>
+    <label><input type="checkbox" id="exportPNG"> Export as PNG</label>
+    <label><input type="checkbox" id="useWatermark"> Add Watermark</label>
+    <div class="form-group">
+      <label>Watermark Text:
+        <input type="text" id="watermarkText" value="Bandar Deterjen" disabled id="watermarkText" oninput="generateEbook()">
+      </label>
+    </div>
+    <label><input type="checkbox" id="exportTXT"> Export as TXT</label>
+    <div class="form-group">
+      <label>File Name Pattern:
+        <input type="text" id="fileNamePattern" value="{title}_{page}" oninput="updateFileNameExample()">
+      </label>
+      <small>Available: `{title}`, `{author}`, `{date}`, `{page}`</small>
+      <p id="fileNameExample" style="margin-top:10px;font-style:italic;"></p>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="tabs">
+      <div class="tab active" data-tab="editor">Editor</div>
+      <div class="tab" data-tab="preview">Preview</div>
+    </div>
+
+    <div class="tab-content active" id="editor">
+      <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+      <div class="btn-group">
+        <button onclick="cleanText()">Clean Text</button>
+        <button onclick="removeSymbols()">Remove Symbols</button>
+        <button onclick="formatParagraphs()">Format Paragraphs</button>
+      </div>
+    </div>
+
+    <div class="tab-content" id="preview">
+      <div class="preview-container" id="preview"></div>
+      <div class="spinner" id="previewSpinner"></div>
+    </div>
+
+    <div class="btn-group">
+      <button onclick="generateEbook()" id="generateBtn">Generate Ebook</button>
+      <button onclick="exportEbook()">Export Ebook</button>
+    </div>
+  </main>
+</div>
+
+<!-- Notification Toast -->
+<div class="notification" id="notification"></div>
+
+<script>
+  let originalText = "";
+  let currentText = "";
+  let coverImageSrc = "";
+  let pages = [];
+
+  // Initialize notification element
+  const notification = document.getElementById("notification");
+
+  function showNotification(message, type = "success") {
+    notification.textContent = message;
+    notification.className = "notification " + type;
+    notification.classList.add("show");
+    setTimeout(() => notification.classList.remove("show"), 3000);
+  }
+
+  // Setup tab navigation
+  setupTabs();
+
+  function setupTabs() {
+    const tabs = document.querySelectorAll(".tab");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        tabs.forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+        tab.classList.add("active");
+        const tabId = tab.getAttribute("data-tab");
+        document.getElementById(tabId).classList.add("active");
+      });
+    });
+  }
+
+  // File Upload Logic
+  setupFileUpload("dropZone", "txtFile", handleTextUpload, "Please upload a valid .txt file.");
+  setupFileUpload("coverDropZone", "imgInput", handleCoverUpload, "Please upload a valid image.");
+
+  function setupFileUpload(zoneId, inputId, handler, errorMsg) {
+    const zone = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
+
+    zone.addEventListener("click", () => input.click());
+    zone.addEventListener("dragover", e => {
+      e.preventDefault();
+      zone.style.borderColor = "#4361ee";
+    });
+    zone.addEventListener("dragleave", () => {
+      zone.style.borderColor = "#ccc";
+    });
+    zone.addEventListener("drop", e => {
+      e.preventDefault();
+      zone.style.borderColor = "#ccc";
+      const file = e.dataTransfer.files[0];
+      if (file && handler(file)) return;
+      showNotification(errorMsg, "error");
+    });
+  }
+
+  function handleTextUpload(event) {
+    const file = event.target.files ? event.target.files[0] : null;
+    if (!file || file.type !== "text/plain") return false;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById("inputText").value = e.target.result;
+      generateEbook();
+      showNotification("Text loaded successfully!");
+    };
+    reader.readAsText(file);
+    return true;
+  }
+
+  function handleCoverUpload(event) {
+    const file = event.target.files ? event.target.files[0] : null;
+    if (!file || !file.type.startsWith("image/")) return false;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      coverImageSrc = e.target.result;
+      const preview = document.getElementById("coverPreview");
+      preview.innerHTML = `
+        <img src="${coverImageSrc}" alt="Cover" style="max-width:100%;border-radius:6px;margin-bottom:10px;">
+        <button onclick="removeCover()">Remove Cover</button>
+      `;
+      generateEbook();
+      showNotification("Cover uploaded!", "success");
+    };
+    reader.readAsDataURL(file);
+    return true;
+  }
+
+  function removeCover() {
+    coverImageSrc = "";
+    document.getElementById("coverPreview").innerHTML = "";
+    document.getElementById("imgInput").value = "";
+    showNotification("Cover removed", "warning");
+  }
+
+  // Text Cleaning Tools
+  function cleanText() {
+    let input = document.getElementById("inputText").value;
+    let cleaned = input.replace(/\r\n/g, "\n")
+                      .replace(/\n{3,}/g, "\n\n")
+                      .replace(/[^\S\n]{2,}/g, ' ')
+                      .trim();
+    document.getElementById("inputText").value = cleaned;
+    showNotification("Text cleaned", "success");
+  }
+
+  function removeSymbols() {
+    let input = document.getElementById("inputText").value;
+    let cleaned = input.replace(/[`~^*+|<>{}_—–]/g, '');
+    document.getElementById("inputText").value = cleaned;
+    showNotification("Symbols removed", "success");
+  }
+
+  function formatParagraphs() {
+    let input = document.getElementById("inputText").value;
+    let paragraphs = input.split(/\n\s*\n/)
+                          .map(p => p.trim())
+                          .filter(p => p.length > 0)
+                          .join("\n\n");
+    document.getElementById("inputText").value = paragraphs;
+    showNotification("Paragraphs formatted", "success");
+  }
+
+  // Generate Ebook Pages
+  function generateEbook() {
+    const input = document.getElementById("inputText").value;
+    if (!input.trim()) return showNotification("Please paste some text first.", "error");
+
+    const bookTitle = document.getElementById("bookTitle").value || "Untitled";
+    const authorName = document.getElementById("authorName").value || "Unknown Author";
+    const includeMeta = document.getElementById("includeMeta").checked;
+    const wordsPerPage = parseInt(document.getElementById("wordCount").value) || 500;
+    const fontFamily = document.getElementById("fontFamily").value;
+    const fontSize = document.getElementById("fontSize").value + "px";
+    const lineHeight = document.getElementById("lineHeight").value;
+    const txtColor = document.getElementById("txtColor").value;
+    const marginTop = document.getElementById("marginTop").value + "px";
+    const marginBottom = document.getElementById("marginBottom").value + "px";
+    const marginLeft = document.getElementById("marginLeft").value + "px";
+    const marginRight = document.getElementById("marginRight").value + "px";
+    const useWatermark = document.getElementById("useWatermark").checked;
+    const watermarkText = document.getElementById("watermarkText").value || "Bandar Deterjen";
+
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    // Show loading spinner
+    const spinner = document.getElementById("previewSpinner");
+    spinner.style.display = "block";
+
+    setTimeout(() => {
+      try {
+        // Clean text
+        let cleaned = input
+          .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDDEF]|\u2600-\u26FF|\u2B00-\u2BFF)/g, '')
+          .replace(/[`~^*+|<>{}_—–]/g, '');
+
+        // Add cover page
+        if (coverImageSrc) {
+          const coverPage = document.createElement("div");
+          coverPage.className = "page";
+          coverPage.style.width = document.getElementById("pageWidth").value + "px";
+          coverPage.style.minHeight = document.getElementById("pageHeight").value + "px";
+          coverPage.style.fontFamily = fontFamily;
+          coverPage.style.fontSize = fontSize;
+          coverPage.style.color = txtColor;
+          coverPage.style.lineHeight = lineHeight;
+          coverPage.style.padding = `${marginTop} ${marginRight} ${marginBottom} ${marginLeft}`;
+          coverPage.style.position = "relative";
+          coverPage.style.textAlign = "center";
+
+          coverPage.innerHTML = `<img src="${coverImageSrc}" style="max-width:80%;margin:auto;display:block;">`;
+          if (includeMeta) {
+            coverPage.innerHTML += `<h2>${bookTitle}</h2><p>by ${authorName}</p>`;
+          }
+
+          preview.appendChild(coverPage);
+        }
+
+        // Detect chapters
+        const chapters = autoDetectChapters(cleaned);
+
+        // Generate pages
+        chapters.forEach((chapter, idx) => {
+          const chapterPages = splitIntoPages(chapter.content, wordsPerPage);
+          chapterPages.forEach((page, i) => {
+            const div = document.createElement("div");
+            div.className = "page";
+            div.style.width = document.getElementById("pageWidth").value + "px";
+            div.style.minHeight = document.getElementById("pageHeight").value + "px";
+            div.style.fontFamily = fontFamily;
+            div.style.fontSize = fontSize;
+            div.style.color = txtColor;
+            div.style.lineHeight = lineHeight;
+            div.style.padding = `${marginTop} ${marginRight} ${marginBottom} ${marginLeft}`;
+
+            // Chapter title
+            if (pageIndex === 0 && chapter.title !== "Untitled") {
+              div.innerHTML += `<h3>${chapter.title}</h3>`;
+            }
+
+            // Content
+            div.innerHTML += `<div class="content">${page.content.replace(/\n/g, "<br>")}</div>`;
+
+            // Footer
+            if (includeMeta) {
+              div.innerHTML += `
+                <div class="footer">
+                  <span>${bookTitle} - ${authorName}</span>
+                  <span>Halaman ${(idx * 10 + i + 1)}</span>
+                </div>
+              `;
+            }
+
+            preview.appendChild(div);
+          });
+        });
+
+        // Store pages for export
+        pages = Array.from(document.querySelectorAll(".page")).map((el, i) => ({
+          element: el,
+          content: el.querySelector(".content")?.innerText || "",
+          pageNumber: i + 1
+        }));
+
+        spinner.style.display = "none";
+        showNotification("Ebook generated successfully!", "success");
+
+      } catch (err) {
+        spinner.style.display = "none";
+        showNotification("Error generating ebook: " + err.message, "error");
+        console.error(err);
+      }
+    }, 100);
+  }
+
+  function autoDetectChapters(text) {
+    const lines = text.split(/\r?\n/);
+    const result = [];
+    let currentChapter = { title: "Untitled", content: [] };
+
+    for (let line of lines) {
+      const match = line.match(/^#\s*(.+)$/);
+      if (match) {
+        if (currentChapter.title !== "Untitled") result.push(currentChapter);
+        currentChapter = { title: match[1].trim(), content: [] };
+      } else {
+        currentChapter.content.push(line);
+      }
+    }
+
+    if (currentChapter.content.length > 0) result.push(currentChapter);
+    return result;
+  }
+
+  function splitIntoPages(content, wordsPerPage = 500) {
+    const paragraphs = content.join('\n').split(/\n{2,}/).filter(p => p.trim().length > 0);
+    const result = [];
+    let currentPage = { content: [], wordCount: 0 };
+
+    paragraphs.forEach(para => {
+      const paraWords = para.trim().split(/\s+/);
+      const wordCount = paraWords.length;
+
+      if (currentPage.wordCount + wordCount > wordsPerPage && currentPage.wordCount > 0) {
+        result.push({ content: currentPage.content.join('\n'), wordCount: currentPage.wordCount });
+        currentPage = { content: [para], wordCount: wordCount };
+      } else {
+        currentPage.content.push(para);
+        currentPage.wordCount += wordCount;
+      }
+    });
+
+    if (currentPage.content.length > 0) {
+      result.push({ content: currentPage.content.join('\n'), wordCount: currentPage.wordCount });
+    }
+
+    return result.map((_, i) => _);
+  }
+
+  // Update file name example
+  function updateFileNameExample() {
+    const pattern = document.getElementById("fileNamePattern").value;
+    const title = document.getElementById("bookTitle").value || "ebook";
+    const date = new Date().toISOString().slice(0, 10);
+    const example = pattern
+      .replace("{title}", title)
+      .replace("{author}", "John Doe")
+      .replace("{date}", date)
+      .replace("{page}", "1");
+    document.getElementById("fileNameExample").textContent = "Example: " + example;
+  }
+
+  // Export Ebook
+  async function exportEbook() {
+    const exportPDF = document.getElementById("exportPDF").checked;
+    const exportPNG = document.getElementById("exportPNG").checked;
+    const exportTXT = document.getElementById("exportTXT").checked;
+    const addWatermark = document.getElementById("useWatermark").checked;
+    const watermarkText = document.getElementById("watermarkText").value || "Bandar Deterjen";
+    const bookTitle = document.getElementById("bookTitle").value || "ebook";
+    const fileNamePattern = document.getElementById("fileNamePattern").value || "{title}_{page}";
+    const now = new Date().toISOString().slice(0, 10);
+
+    if (!exportPDF && !exportPNG && !exportTXT) {
+      showNotification("Please choose at least one export format", "error");
+      return;
+    }
+
+    const zip = new JSZip();
+    const pdfFolder = zip.folder("pdf");
+    const pngFolder = zip.folder("png");
+    const txtFolder = zip.folder("txt");
+
+    const doc = new jsPDF("p", "pt", "a4");
+
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const fileName = fileNamePattern
+        .replace(/{title}/g, bookTitle)
+        .replace(/{author}/g, document.getElementById("authorName").value || "unknown")
+        .replace(/{date}/g, now)
+        .replace(/{page}/g, `page_${i + 1}`);
+
+      if (exportPDF) {
+        const canvas = await html2canvas(page.element, { scale: 2 });
+        const imgData = canvas.toDataURL("image/png");
+        if (i !== 0) doc.addPage();
+        doc.addImage(imgData, "PNG", 0, 0, doc.internal.pageSize.getWidth(), (canvas.height * doc.internal.pageSize.getWidth()) / canvas.width);
+        pdfFolder.file(`${fileName}.pdf`, doc.output("blob"), { binary: true });
+      }
+
+      if (exportPNG) {
+        const canvas = await html2canvas(page.element, { scale: 2 });
+        const ctx = canvas.getContext("2d");
+
+        if (addWatermark) {
+          ctx.save();
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(Math.PI / 4); // 45 degrees
+          ctx.fillStyle = "rgba(0,0,0,0.1)";
+          ctx.font = "bold 30px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(watermarkText, 0, 0);
+          ctx.restore();
+        }
+
+        pngFolder.file(`${fileName}.png`, canvas.toDataURL("image/png").replace(/^.*?,/, ""), { base64: true });
+      }
+
+      if (exportTXT) {
+        txtFolder.file(`${fileName}.txt`, page.content);
+      }
+    }
+
+    if ((exportPDF && exportPNG) || (exportPDF && exportTXT) || (exportPNG && exportTXT) || (exportPDF && exportPNG && exportTXT)) {
+      const blob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${bookTitle}_ebook.zip`;
+      link.click();
+      showNotification("All formats exported in ZIP", "success");
+    } else {
+      if (exportPDF) {
+        const blob = doc.output("blob");
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${bookTitle}_full.pdf`;
+        link.click();
+        showNotification("PDF exported", "success");
+      }
+
+      if (exportPNG) {
+        for (let i = 0; i < pages.length; i++) {
+          const canvas = await html2canvas(pages[i].element, { scale: 2 });
+          const ctx = canvas.getContext("2d");
+
+          if (addWatermark) {
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillStyle = "rgba(0,0,0,0.1)";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(watermarkText, 0, 0);
+            ctx.restore();
+          }
+
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `${bookTitle}_page_${i + 1}.png`;
+          link.click();
+        }
+        showNotification("PNG pages exported", "success");
+      }
+
+      if (exportTXT) {
+        let fullText = "";
+        pages.forEach(p => {
+          fullText += `--- Page ${p.pageNumber} ---
+${p.content}
+`;
+        });
+        const blob = new Blob([fullText], { type: "text/plain" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${bookTitle}.txt`;
+        link.click();
+        showNotification("TXT exported", "success");
+      }
+    }
+  }
+
+  // Event Listeners
+  document.getElementById("useWatermark").addEventListener("change", function () {
+    document.getElementById("watermarkText").disabled = !this.checked;
+  });
+
+  document.getElementById("useWatermark").dispatchEvent(new Event("change"));
+
+  document.getElementById("useWatermark").onchange = updateFileNameExample;
+  document.getElementById("bookTitle").oninput = updateFileNameExample;
+  document.getElementById("authorName").oninput = updateFileNameExample;
+  document.getElementById("fileNamePattern").oninput = updateFileNameExample;
+
+  updateFileNameExample();
+</script>
+
+</body>
+</html>
