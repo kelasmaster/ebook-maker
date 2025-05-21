@@ -355,7 +355,7 @@
     const chapters = autoDetectChapters(cleaned);
 
     chapters.forEach((chapter, idx) => {
-      const chapterPages = splitIntoPages(chapter.content, 300);
+      const chapterPages = splitIntoPages(chapter.content, 500);
 
       chapterPages.forEach((page, i) => {
         const div = document.createElement("div");
@@ -383,7 +383,7 @@
     const usePDF = document.getElementById("exportPDF").checked;
     const usePNG = document.getElementById("exportPNG").checked;
     const addWatermark = document.getElementById("useWatermark").checked;
-    const watermarkText = document.getElementById("watermarkText").value || "© Ebook Maker";
+    const watermarkText = document.getElementById("watermarkText").value || "© Pembuat Ebook";
     const bookTitle = document.getElementById("bookTitle").value.trim() || "ebook";
     const fileName = bookTitle
       .toLowerCase()
